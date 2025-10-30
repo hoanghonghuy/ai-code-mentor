@@ -25,8 +25,10 @@ export interface LearningModule {
   lessons: Lesson[];
 }
 
+export type LearningPathId = 'js-basics' | 'python-basics' | 'csharp-basics' | 'go-basics' | 'java-basics' | 'frontend-basics' | 'fullstack-basics' | 'mobile-basics';
+
 export interface LearningPath {
-  id: string;
+  id: LearningPathId;
   title: string;
   modules: LearningModule[];
 }

@@ -1,44 +1,26 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
 import Notification from './components/Notification';
-import { TrophyIcon } from './components/icons';
+import { TrophyIcon, NoteIcon, PlayIcon } from './components/icons';
+import { learningPaths } from './learningPaths';
+import NotesPanel from './components/NotesPanel';
+import SettingsView from './components/SettingsView';
 
-
-// Hardcoded learning path data as a starting point
-const INITIAL_JAVASCRIPT_PATH: LearningPath = {
-  id: 'js-basics',
-  title: 'JavaScript for Beginners',
-  modules: [
-    {
-      title: 'Module 1: The Basics',
-      lessons: [
-        { id: 'js-1-1', title: 'What is JavaScript?', prompt: 'Explain what JavaScript is to a complete beginner. Use a simple analogy.', completed: false },
-        { id: 'js-1-2', title: 'Variables & Data Types', prompt: 'Teach me about JavaScript variables (var, let, const) and common data types (string, number, boolean). Provide code examples for each.', completed: false },
-        { id: 'js-1-3', title: 'Operators', prompt: 'Introduce me to JavaScript operators: arithmetic, assignment, comparison, and logical. Give me a simple example for each category.', completed: false },
-      ],
-    },
-    {
-      title: 'Module 2: Control Flow',
-      lessons: [
-        { id: 'js-2-1', title: 'Conditional Statements', prompt: 'Explain `if`, `else if`, and `else` statements in JavaScript. Provide a practical code example.', completed: false },
-        { id: 'js-2-2', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in JavaScript. When should I use each one? Show me examples.', completed: false },
-        { id: 'js-2-3', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values.', completed: false },
-      ],
-    },
-  ],
+const getInitialAchievements = (pathTitle: string): Achievement[] => {
+    const definitions: Omit<Achievement, 'unlocked'>[] = [
+        { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: TrophyIcon },
+        { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: TrophyIcon },
+        { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: TrophyIcon },
+        { id: 'path-complete', name: `${pathTitle} Journeyman`, description: `Complete the entire ${pathTitle} path.`, icon: TrophyIcon },
+    ];
+    return definitions.map(ach => ({ ...ach, unlocked: false }));
 };
 
-const INITIAL_ACHIEVEMENTS: Omit<Achievement, 'unlocked'>[] = [
-    { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: TrophyIcon },
-    { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: TrophyIcon },
-    { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: TrophyIcon },
-    { id: 'path-complete', name: 'JS Journeyman', description: 'Complete the entire JS path.', icon: TrophyIcon },
-];
 
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -46,15 +28,21 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [learningPath, setLearningPath] = useState<LearningPath>(INITIAL_JAVASCRIPT_PATH);
+  
+  const [activePathId, setActivePathId] = useState<LearningPathId>('js-basics');
+  const [learningPath, setLearningPath] = useState<LearningPath>(learningPaths[activePathId]);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   
   // Gamification State
   const [points, setPoints] = useState(0);
-  const [achievements, setAchievements] = useState<Achievement[]>(
-    INITIAL_ACHIEVEMENTS.map(ach => ({...ach, unlocked: false}))
-  );
+  const [achievements, setAchievements] = useState<Achievement[]>(getInitialAchievements(learningPath.title));
   const [notification, setNotification] = useState<Achievement | null>(null);
+
+  // New State for features
+  const [notes, setNotes] = useState<{ [key: string]: string }>({});
+  const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>([]);
+  const [customDocs, setCustomDocs] = useState<string[]>(['https://react.dev', 'https://developer.mozilla.org/']);
+  const [activeRightTab, setActiveRightTab] = useState<'playground' | 'notes'>('playground');
 
 
   const ai = useMemo(() => {
@@ -118,6 +106,27 @@ const App: React.FC = () => {
         }
         return prev;
     });
+  }, []);
+  
+  // Handlers for new features
+  const handleNoteChange = useCallback((lessonId: string, newNote: string) => {
+    setNotes(prev => ({ ...prev, [lessonId]: newNote }));
+  }, []);
+
+  const handleToggleBookmark = useCallback((lessonId: string) => {
+    setBookmarkedLessonIds(prev =>
+      prev.includes(lessonId)
+        ? prev.filter(id => id !== lessonId)
+        : [...prev, lessonId]
+    );
+  }, []);
+
+  const handleAddCustomDoc = useCallback((url: string) => {
+    setCustomDocs(prev => [...prev, url]);
+  }, []);
+
+  const handleRemoveCustomDoc = useCallback((indexToRemove: number) => {
+    setCustomDocs(prev => prev.filter((_, index) => index !== indexToRemove));
   }, []);
 
   const handleSendMessage = useCallback(async (message: string) => {
@@ -201,6 +210,24 @@ const App: React.FC = () => {
     }
   }, [startNewChat, handleSendMessage, unlockAchievement]);
 
+  const handleSelectPath = useCallback((pathId: LearningPathId) => {
+    setActivePathId(pathId);
+    
+    // Reset progress for the new path
+    const newPathData = learningPaths[pathId];
+    setLearningPath(newPathData);
+    setAchievements(getInitialAchievements(newPathData.title));
+    setPoints(0);
+    setActiveLessonId(null);
+    startNewChat();
+  }, [startNewChat]);
+
+  const activeLesson = useMemo(() => {
+    if (!activeLessonId) return null;
+    return learningPath.modules.flatMap(m => m.lessons).find(l => l.id === activeLessonId) || null;
+  }, [activeLessonId, learningPath]);
+
+
   if (!process.env.API_KEY) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -223,6 +250,14 @@ const App: React.FC = () => {
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
           achievements={achievements}
+          allPaths={Object.values(learningPaths)}
+          activePathId={activePathId}
+          onSelectPath={handleSelectPath}
+          bookmarkedLessonIds={bookmarkedLessonIds}
+          onToggleBookmark={handleToggleBookmark}
+          customDocs={customDocs}
+          onAddDoc={handleAddCustomDoc}
+          onRemoveDoc={handleRemoveCustomDoc}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
@@ -230,7 +265,32 @@ const App: React.FC = () => {
               <ChatInterface messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
             </div>
             <div className="flex-1 flex flex-col min-h-0 lg:max-w-xl xl:max-w-2xl">
-              <CodePlayground onFirstRun={handleFirstCodeRun} />
+              <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 mb-2">
+                <div className="flex items-center">
+                  <button 
+                    onClick={() => setActiveRightTab('playground')}
+                    className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'playground' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    <PlayIcon className="w-5 h-5"/> Playground
+                  </button>
+                  <button 
+                    onClick={() => setActiveRightTab('notes')}
+                    className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'notes' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    <NoteIcon className="w-5 h-5"/> Notes
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0">
+                {activeRightTab === 'playground' && <CodePlayground onFirstRun={handleFirstCodeRun} />}
+                {activeRightTab === 'notes' && (
+                  <NotesPanel 
+                    note={activeLessonId ? notes[activeLessonId] || '' : ''}
+                    onNoteChange={(newNote) => activeLessonId && handleNoteChange(activeLessonId, newNote)}
+                    activeLessonTitle={activeLesson?.title || null}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </main>
