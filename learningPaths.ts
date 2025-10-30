@@ -21,6 +21,21 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     { id: 'js-2-3', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values.', completed: false },
                 ],
             },
+            {
+                title: 'Project: Build a Todo List App',
+                project: {
+                    id: 'proj-todo-app',
+                    title: 'Project: Build a Todo List App',
+                    description: 'Apply your knowledge by building a functional Todo List application from scratch.',
+                    steps: [
+                        { id: 'proj-todo-1', title: 'Step 1: HTML Structure', prompt: 'Guide me in setting up the basic HTML structure for a Todo List app. I need an input field, a button to add tasks, and an unordered list to display the tasks.', completed: false },
+                        { id: 'proj-todo-2', title: 'Step 2: Basic CSS Styling', prompt: 'Help me style the Todo List app with some basic CSS. Let\'s center the main container, style the input/button, and make the task list look clean.', completed: false },
+                        { id: 'proj-todo-3', title: 'Step 3: Add New Tasks with JS', prompt: 'Teach me the JavaScript to add a new task. I need to get the value from the input, create a new list item, and append it to the task list when the button is clicked.', completed: false },
+                        { id: 'proj-todo-4', title: 'Step 4: Mark Tasks as Complete', prompt: 'How can I add functionality to mark a task as complete? Let\'s make it so clicking on a task toggles a "completed" class that adds a line-through style.', completed: false },
+                        { id: 'proj-todo-5', title: 'Step 5: Remove Tasks', prompt: 'I need a way to remove tasks. Help me add a "delete" button to each task item and write the JavaScript to remove the item from the list when its delete button is clicked.', completed: false },
+                    ]
+                }
+            }
         ],
     },
     'python-basics': {

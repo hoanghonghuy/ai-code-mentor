@@ -20,9 +20,24 @@ export interface Lesson {
   completed: boolean;
 }
 
+export interface ProjectStep {
+  id: string;
+  title: string;
+  prompt: string;
+  completed: boolean;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  steps: ProjectStep[];
+}
+
 export interface LearningModule {
   title: string;
-  lessons: Lesson[];
+  lessons?: Lesson[];
+  project?: Project;
 }
 
 export type LearningPathId = 'js-basics' | 'python-basics' | 'csharp-basics' | 'go-basics' | 'java-basics' | 'frontend-basics' | 'fullstack-basics' | 'mobile-basics';

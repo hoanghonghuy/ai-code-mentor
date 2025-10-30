@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
@@ -16,6 +16,7 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
         { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: TrophyIcon },
         { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: TrophyIcon },
         { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: TrophyIcon },
+        { id: 'project-builder', name: 'Project Builder', description: 'Complete your first guided project.', icon: TrophyIcon },
         { id: 'path-complete', name: `${pathTitle} Journeyman`, description: `Complete the entire ${pathTitle} path.`, icon: TrophyIcon },
     ];
     return definitions.map(ach => ({ ...ach, unlocked: false }));
@@ -74,7 +75,7 @@ const App: React.FC = () => {
         Explain concepts clearly, provide step-by-step instructions, analyze code, and give constructive feedback. 
         Keep your explanations concise, friendly, and focused. 
         Use markdown for formatting, especially for code blocks (e.g., \`\`\`javascript).
-        When a user starts a lesson, greet them and begin teaching the topic immediately.`,
+        When a user starts a lesson or project step, greet them and begin teaching the topic immediately.`,
         tools: [{googleSearch: {}}],
       },
     });
@@ -172,33 +173,55 @@ const App: React.FC = () => {
     unlockAchievement('bug-hunter');
   }, [unlockAchievement]);
   
-  const handleSelectLesson = useCallback((lesson: Lesson) => {
+  const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
     const currentChat = startNewChat();
     if (currentChat) {
-      handleSendMessage(lesson.prompt);
+      handleSendMessage(item.prompt);
     }
-    setActiveLessonId(lesson.id);
+    setActiveLessonId(item.id);
 
     setLearningPath(currentPath => {
-        const lessonInState = currentPath.modules.flatMap(m => m.lessons).find(l => l.id === lesson.id);
-        
+        let itemAlreadyCompleted = false;
+
+        const newPath = { ...currentPath, modules: currentPath.modules.map(module => {
+            if (module.lessons) {
+                const lesson = module.lessons.find(l => l.id === item.id);
+                if (lesson) {
+                    itemAlreadyCompleted = lesson.completed;
+                    return { ...module, lessons: module.lessons.map(l => l.id === item.id ? { ...l, completed: true } : l) };
+                }
+            } else if (module.project) {
+                const step = module.project.steps.find(s => s.id === item.id);
+                 if (step) {
+                    itemAlreadyCompleted = step.completed;
+                    return { ...module, project: { ...module.project, steps: module.project.steps.map(s => s.id === item.id ? { ...s, completed: true } : s) }};
+                }
+            }
+            return module;
+        })};
+
         // Award points only for the first completion
-        if (!lessonInState?.completed) {
+        if (!itemAlreadyCompleted) {
             setPoints(p => p + 10);
             unlockAchievement('first-lesson');
         }
 
-        const newPath = { ...currentPath, modules: currentPath.modules.map(module => ({
-            ...module,
-            lessons: module.lessons.map(l => l.id === lesson.id ? { ...l, completed: true } : l)
-        }))};
+        // Check for module/project/path completion
+        const updatedModule = newPath.modules.find(m => 
+            m.lessons?.some(l => l.id === item.id) || m.project?.steps.some(s => s.id === item.id)
+        );
 
-        // Check for module/path completion
-        const updatedModule = newPath.modules.find(m => m.lessons.some(l => l.id === lesson.id));
-        if (updatedModule && updatedModule.lessons.every(l => l.completed)) {
-            unlockAchievement('first-module');
+        if (updatedModule) {
+            if (updatedModule.lessons && updatedModule.lessons.every(l => l.completed)) {
+                unlockAchievement('first-module');
+            }
+            if (updatedModule.project && updatedModule.project.steps.every(s => s.completed)) {
+                unlockAchievement('project-builder');
+            }
         }
-        if (newPath.modules.every(m => m.lessons.every(l => l.completed))) {
+        
+        const allLessonsAndSteps = newPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
+        if (allLessonsAndSteps.every(i => i.completed)) {
             unlockAchievement('path-complete');
         }
         
@@ -224,7 +247,7 @@ const App: React.FC = () => {
 
   const activeLesson = useMemo(() => {
     if (!activeLessonId) return null;
-    return learningPath.modules.flatMap(m => m.lessons).find(l => l.id === activeLessonId) || null;
+    return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
   }, [activeLessonId, learningPath]);
 
 
