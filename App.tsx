@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
@@ -86,7 +86,8 @@ const App: React.FC = () => {
         Explain concepts clearly, provide step-by-step instructions, analyze code, and give constructive feedback. 
         Keep your explanations concise, friendly, and focused. 
         Use markdown for formatting, especially for code blocks (e.g., \`\`\`javascript).
-        When a user starts a lesson, greet them and begin teaching the topic immediately.`
+        When a user starts a lesson, greet them and begin teaching the topic immediately.`,
+        tools: [{googleSearch: {}}],
       },
     });
     setChat(newChat);
@@ -129,13 +130,23 @@ const App: React.FC = () => {
     try {
       const result = await chat.sendMessageStream({ message });
       let text = '';
+      let groundingChunks: GroundingChunk[] = [];
       setMessages(prev => [...prev, { role: 'model', parts: [{ text: '' }] }]);
       
       for await (const chunk of result) {
         text += chunk.text;
+        if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+            groundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
+        }
+
         setMessages(prev => {
           const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = { role: 'model', parts: [{ text }] };
+          const lastMessage = newMessages[newMessages.length - 1];
+          newMessages[newMessages.length - 1] = { 
+            ...lastMessage,
+            parts: [{ text }],
+            groundingChunks: groundingChunks.length > 0 ? groundingChunks : undefined,
+          };
           return newMessages;
         });
       }

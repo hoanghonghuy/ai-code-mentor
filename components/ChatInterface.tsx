@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { SendIcon, UserIcon, BotIcon } from './icons';
+import { SendIcon, UserIcon, BotIcon, LinkIcon } from './icons';
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -126,9 +126,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
         {messages.map((msg, index) => (
           <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'model' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 flex items-center justify-center"><BotIcon className="w-5 h-5 text-white" /></div>}
-            <div className={`max-w-xl p-3 rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
-              <SimpleMarkdown text={msg.parts[0].text} />
+            
+            <div className={`max-w-xl rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+              <div className="p-3">
+                 <SimpleMarkdown text={msg.parts[0].text} />
+              </div>
+               {msg.groundingChunks && msg.groundingChunks.length > 0 && (
+                <div className="border-t border-gray-300 dark:border-gray-600 mt-2 p-3">
+                  <h4 className="text-xs font-bold mb-2 flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <LinkIcon className="w-4 h-4" />
+                    Sources
+                  </h4>
+                  <ul className="space-y-1">
+                    {msg.groundingChunks.map((chunk, i) => chunk.web && (
+                      <li key={i} className="text-xs">
+                        <a 
+                          href={chunk.web.uri} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary-600 dark:text-primary-400 hover:underline truncate block"
+                          title={chunk.web.title}
+                        >
+                          {chunk.web.title || chunk.web.uri}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
+
             {msg.role === 'user' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"><UserIcon className="w-5 h-5" /></div>}
           </div>
         ))}

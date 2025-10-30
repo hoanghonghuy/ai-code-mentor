@@ -1,8 +1,16 @@
 import { Chat } from "@google/genai";
 
+export interface GroundingChunk {
+  web?: {
+    uri: string;
+    title: string;
+  };
+}
+
 export interface ChatMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
+  groundingChunks?: GroundingChunk[];
 }
 
 export interface Lesson {
