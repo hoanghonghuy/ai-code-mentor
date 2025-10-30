@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage } from './types';
@@ -6,27 +5,26 @@ import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
-import { MenuIcon, XIcon } from './components/icons';
 
 // Hardcoded learning path data as a starting point
-const JAVASCRIPT_PATH: LearningPath = {
+const INITIAL_JAVASCRIPT_PATH: LearningPath = {
   id: 'js-basics',
   title: 'JavaScript for Beginners',
   modules: [
     {
       title: 'Module 1: The Basics',
       lessons: [
-        { id: 'js-1-1', title: 'What is JavaScript?', prompt: 'Explain what JavaScript is to a complete beginner. Use a simple analogy.' },
-        { id: 'js-1-2', title: 'Variables & Data Types', prompt: 'Teach me about JavaScript variables (var, let, const) and common data types (string, number, boolean). Provide code examples for each.' },
-        { id: 'js-1-3', title: 'Operators', prompt: 'Introduce me to JavaScript operators: arithmetic, assignment, comparison, and logical. Give me a simple example for each category.' },
+        { id: 'js-1-1', title: 'What is JavaScript?', prompt: 'Explain what JavaScript is to a complete beginner. Use a simple analogy.', completed: false },
+        { id: 'js-1-2', title: 'Variables & Data Types', prompt: 'Teach me about JavaScript variables (var, let, const) and common data types (string, number, boolean). Provide code examples for each.', completed: false },
+        { id: 'js-1-3', title: 'Operators', prompt: 'Introduce me to JavaScript operators: arithmetic, assignment, comparison, and logical. Give me a simple example for each category.', completed: false },
       ],
     },
     {
       title: 'Module 2: Control Flow',
       lessons: [
-        { id: 'js-2-1', title: 'Conditional Statements', prompt: 'Explain `if`, `else if`, and `else` statements in JavaScript. Provide a practical code example.' },
-        { id: 'js-2-2', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in JavaScript. When should I use each one? Show me examples.' },
-        { id: 'js-2-3', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values.' },
+        { id: 'js-2-1', title: 'Conditional Statements', prompt: 'Explain `if`, `else if`, and `else` statements in JavaScript. Provide a practical code example.', completed: false },
+        { id: 'js-2-2', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in JavaScript. When should I use each one? Show me examples.', completed: false },
+        { id: 'js-2-3', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values.', completed: false },
       ],
     },
   ],
@@ -38,6 +36,8 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [learningPath, setLearningPath] = useState<LearningPath>(INITIAL_JAVASCRIPT_PATH);
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
   const ai = useMemo(() => {
     if (process.env.API_KEY) {
@@ -114,11 +114,31 @@ const App: React.FC = () => {
 
   const handleSelectLesson = useCallback((lesson: Lesson) => {
     const currentChat = startNewChat();
-    if(currentChat) {
+    if (currentChat) {
       handleSendMessage(lesson.prompt);
     }
-     if (window.innerWidth < 768) {
-      setSidebarOpen(false);
+    setActiveLessonId(lesson.id);
+
+    // Mark lesson as complete if it's not already
+    setLearningPath(currentPath => {
+        const lessonInState = currentPath.modules
+            .flatMap(m => m.lessons)
+            .find(l => l.id === lesson.id);
+        
+        if (lessonInState?.completed) return currentPath;
+
+        const newPath = { ...currentPath };
+        newPath.modules = newPath.modules.map(module => ({
+            ...module,
+            lessons: module.lessons.map(l => 
+                l.id === lesson.id ? { ...l, completed: true } : l
+            )
+        }));
+        return newPath;
+    });
+
+    if (window.innerWidth < 768) {
+        setSidebarOpen(false);
     }
   }, [startNewChat, handleSendMessage]);
 
@@ -138,8 +158,9 @@ const App: React.FC = () => {
       <Header theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden">
         <LearningPathView 
-          learningPath={JAVASCRIPT_PATH} 
+          learningPath={learningPath} 
           onSelectLesson={handleSelectLesson}
+          activeLessonId={activeLessonId}
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
         />
@@ -159,4 +180,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-   

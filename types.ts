@@ -1,4 +1,3 @@
-
 import { Chat } from "@google/genai";
 
 export interface ChatMessage {
@@ -10,6 +9,7 @@ export interface Lesson {
   id: string;
   title: string;
   prompt: string;
+  completed: boolean;
 }
 
 export interface LearningModule {
@@ -30,4 +30,3 @@ export interface AppContextType {
   toggleTheme: () => void;
   chat: Chat | null;
 }
-   
