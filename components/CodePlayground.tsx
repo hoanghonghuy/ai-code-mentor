@@ -6,8 +6,40 @@ interface CodePlaygroundProps {
   onFirstRun: () => void;
 }
 
+type SupportedLanguage = 'javascript' | 'python' | 'csharp' | 'go' | 'java';
+
+const defaultCode: Record<SupportedLanguage, string> = {
+  javascript: '// Write your JavaScript code here\nconsole.log("Hello, AI Mentor!");',
+  python: '# Write your Python code here\nprint("Hello, AI Mentor!")',
+  csharp: `// Write your C# code here
+using System;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        Console.WriteLine("Hello, AI Mentor!");
+    }
+}`,
+  go: `// Write your Go code here
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, AI Mentor!")
+}`,
+  java: `// Write your Java code here
+class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, AI Mentor!");
+    }
+}`
+};
+
 const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
-  const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, AI Mentor!");');
+  const [language, setLanguage] = useState<SupportedLanguage>('javascript');
+  const [code, setCode] = useState(defaultCode.javascript);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const hasRunOnce = useRef(false);
@@ -18,6 +50,12 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
     }
     return null;
   }, []);
+
+  const handleLanguageChange = (lang: SupportedLanguage) => {
+    setLanguage(lang);
+    setCode(defaultCode[lang]);
+    setOutput('');
+  };
 
   const handleRunCode = async () => {
     if (!ai) {
@@ -36,7 +74,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Execute the following JavaScript code and provide only the raw console output. If there is an error, provide only the error message. Do not add any explanation or formatting. Code:\n\n\`\`\`javascript\n${code}\n\`\`\``
+        contents: `Execute the following ${language} code and provide only the raw console output. If there is an error, provide only the error message. Do not add any explanation or formatting. Code:\n\n\`\`\`${language}\n${code}\n\`\`\``
       });
       setOutput(response.text.trim());
     } catch (error) {
@@ -48,9 +86,22 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold">Code Playground</h2>
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-2.5-dark:border-gray-700 shadow-sm">
+      <div className="flex justify-between items-center p-4 border-b border-gray-2.5-dark:border-gray-700">
+        <div className="flex items-center gap-4">
+            <h2 className="text-lg font-semibold">Code Playground</h2>
+            <select
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguage)}
+                className="p-1 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="csharp">C#</option>
+                <option value="go">Go</option>
+                <option value="java">Java</option>
+            </select>
+        </div>
         <button
           onClick={handleRunCode}
           disabled={isRunning}
@@ -70,7 +121,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
                 spellCheck="false"
             />
         </div>
-        <div className="h-48 border-t border-gray-200 dark:border-gray-700">
+        <div className="h-48 border-t border-gray-2.5-dark:border-gray-700">
             <div className="p-4 bg-gray-100 dark:bg-black/20 h-full">
                 <h3 className="text-sm font-semibold mb-2">Output:</h3>
                 <pre className="text-sm whitespace-pre-wrap font-mono h-full overflow-y-auto">{output}</pre>
