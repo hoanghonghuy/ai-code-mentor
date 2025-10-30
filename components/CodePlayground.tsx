@@ -1,12 +1,16 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
 
-const CodePlayground: React.FC = () => {
+interface CodePlaygroundProps {
+  onFirstRun: () => void;
+}
+
+const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   const [code, setCode] = useState('// Write your JavaScript code here\nconsole.log("Hello, AI Mentor!");');
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
+  const hasRunOnce = useRef(false);
 
   const ai = useMemo(() => {
     if (process.env.API_KEY) {
@@ -20,6 +24,11 @@ const CodePlayground: React.FC = () => {
         setOutput("Error: Gemini AI not initialized. Check API Key.");
         return;
     };
+
+    if (!hasRunOnce.current) {
+      onFirstRun();
+      hasRunOnce.current = true;
+    }
 
     setIsRunning(true);
     setOutput('Executing code...');
@@ -73,4 +82,3 @@ const CodePlayground: React.FC = () => {
 };
 
 export default CodePlayground;
-   

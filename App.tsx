@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
+import Notification from './components/Notification';
+import { TrophyIcon } from './components/icons';
+
 
 // Hardcoded learning path data as a starting point
 const INITIAL_JAVASCRIPT_PATH: LearningPath = {
@@ -30,6 +33,13 @@ const INITIAL_JAVASCRIPT_PATH: LearningPath = {
   ],
 };
 
+const INITIAL_ACHIEVEMENTS: Omit<Achievement, 'unlocked'>[] = [
+    { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: TrophyIcon },
+    { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: TrophyIcon },
+    { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: TrophyIcon },
+    { id: 'path-complete', name: 'JS Journeyman', description: 'Complete the entire JS path.', icon: TrophyIcon },
+];
+
 const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [chat, setChat] = useState<Chat | null>(null);
@@ -38,6 +48,14 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [learningPath, setLearningPath] = useState<LearningPath>(INITIAL_JAVASCRIPT_PATH);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  
+  // Gamification State
+  const [points, setPoints] = useState(0);
+  const [achievements, setAchievements] = useState<Achievement[]>(
+    INITIAL_ACHIEVEMENTS.map(ach => ({...ach, unlocked: false}))
+  );
+  const [notification, setNotification] = useState<Achievement | null>(null);
+
 
   const ai = useMemo(() => {
     if (process.env.API_KEY) {
@@ -83,6 +101,24 @@ const App: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ai]);
 
+  const showNotification = (achievement: Achievement) => {
+    setNotification(achievement);
+    setTimeout(() => {
+        setNotification(null);
+    }, 5000); // Notification disappears after 5 seconds
+  };
+
+  const unlockAchievement = useCallback((id: string) => {
+    setAchievements(prev => {
+        const target = prev.find(a => a.id === id);
+        if (target && !target.unlocked) {
+            showNotification(target);
+            return prev.map(a => a.id === id ? { ...a, unlocked: true } : a);
+        }
+        return prev;
+    });
+  }, []);
+
   const handleSendMessage = useCallback(async (message: string) => {
     if (!chat) return;
 
@@ -112,6 +148,10 @@ const App: React.FC = () => {
     }
   }, [chat]);
 
+  const handleFirstCodeRun = useCallback(() => {
+    unlockAchievement('bug-hunter');
+  }, [unlockAchievement]);
+  
   const handleSelectLesson = useCallback((lesson: Lesson) => {
     const currentChat = startNewChat();
     if (currentChat) {
@@ -119,28 +159,36 @@ const App: React.FC = () => {
     }
     setActiveLessonId(lesson.id);
 
-    // Mark lesson as complete if it's not already
     setLearningPath(currentPath => {
-        const lessonInState = currentPath.modules
-            .flatMap(m => m.lessons)
-            .find(l => l.id === lesson.id);
+        const lessonInState = currentPath.modules.flatMap(m => m.lessons).find(l => l.id === lesson.id);
         
-        if (lessonInState?.completed) return currentPath;
+        // Award points only for the first completion
+        if (!lessonInState?.completed) {
+            setPoints(p => p + 10);
+            unlockAchievement('first-lesson');
+        }
 
-        const newPath = { ...currentPath };
-        newPath.modules = newPath.modules.map(module => ({
+        const newPath = { ...currentPath, modules: currentPath.modules.map(module => ({
             ...module,
-            lessons: module.lessons.map(l => 
-                l.id === lesson.id ? { ...l, completed: true } : l
-            )
-        }));
+            lessons: module.lessons.map(l => l.id === lesson.id ? { ...l, completed: true } : l)
+        }))};
+
+        // Check for module/path completion
+        const updatedModule = newPath.modules.find(m => m.lessons.some(l => l.id === lesson.id));
+        if (updatedModule && updatedModule.lessons.every(l => l.completed)) {
+            unlockAchievement('first-module');
+        }
+        if (newPath.modules.every(m => m.lessons.every(l => l.completed))) {
+            unlockAchievement('path-complete');
+        }
+        
         return newPath;
     });
 
     if (window.innerWidth < 768) {
         setSidebarOpen(false);
     }
-  }, [startNewChat, handleSendMessage]);
+  }, [startNewChat, handleSendMessage, unlockAchievement]);
 
   if (!process.env.API_KEY) {
     return (
@@ -155,7 +203,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Header theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} points={points} />
       <div className="flex flex-1 overflow-hidden">
         <LearningPathView 
           learningPath={learningPath} 
@@ -163,6 +211,7 @@ const App: React.FC = () => {
           activeLessonId={activeLessonId}
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
+          achievements={achievements}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
@@ -170,11 +219,12 @@ const App: React.FC = () => {
               <ChatInterface messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
             </div>
             <div className="flex-1 flex flex-col min-h-0 lg:max-w-xl xl:max-w-2xl">
-              <CodePlayground />
+              <CodePlayground onFirstRun={handleFirstCodeRun} />
             </div>
           </div>
         </main>
       </div>
+      <Notification achievement={notification} />
     </div>
   );
 };

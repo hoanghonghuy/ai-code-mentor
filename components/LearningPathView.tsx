@@ -1,6 +1,7 @@
-import React from 'react';
-import type { LearningPath, Lesson, LearningModule } from '../types';
+import React, { useState } from 'react';
+import type { LearningPath, Lesson, LearningModule, Achievement } from '../types';
 import { ChevronDownIcon, XIcon, CheckCircleIcon } from './icons';
+import AchievementsView from './AchievementsView';
 
 interface LearningPathProps {
   learningPath: LearningPath;
@@ -8,6 +9,7 @@ interface LearningPathProps {
   activeLessonId: string | null;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  achievements: Achievement[];
 }
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
@@ -70,31 +72,55 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
     )
 }
 
-const LearningPathView: React.FC<LearningPathProps> = ({ learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen }) => {
+const LearningPathView: React.FC<LearningPathProps> = ({ learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements }) => {
+  const [activeTab, setActiveTab] = useState<'path' | 'achievements'>('path');
   const totalLessons = learningPath.modules.reduce((acc, module) => acc + module.lessons.length, 0);
   const completedLessons = learningPath.modules.reduce((acc, module) => acc + module.lessons.filter(l => l.completed).length, 0);
   const overallProgress = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+
+  const TabButton: React.FC<{tabId: 'path' | 'achievements', children: React.ReactNode}> = ({ tabId, children }) => (
+    <button
+        onClick={() => setActiveTab(tabId)}
+        className={`flex-1 py-2 text-sm font-semibold rounded-md ${activeTab === tabId ? 'bg-primary-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+    >
+        {children}
+    </button>
+  );
 
   return (
     <>
       <aside className={`absolute md:static z-20 h-full flex-shrink-0 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-lg font-bold">{learningPath.title}</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold">
+                        {activeTab === 'path' ? learningPath.title : 'Achievements'}
+                    </h2>
                     <button onClick={() => setIsOpen(false)} className="md:hidden p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
                         <XIcon className="w-5 h-5" />
                     </button>
                 </div>
-                <div className="flex items-center gap-3">
-                    <ProgressBar value={overallProgress} />
-                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{Math.round(overallProgress)}%</span>
+                {activeTab === 'path' && (
+                    <div className="flex items-center gap-3">
+                        <ProgressBar value={overallProgress} />
+                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{Math.round(overallProgress)}%</span>
+                    </div>
+                )}
+            </div>
+            <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
+                    <TabButton tabId="path">Learning Path</TabButton>
+                    <TabButton tabId="achievements">Achievements</TabButton>
                 </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto">
-                {learningPath.modules.map(module => (
-                    <ModuleView key={module.title} module={module} onSelectLesson={onSelectLesson} activeLessonId={activeLessonId} />
-                ))}
+                {activeTab === 'path' ? (
+                     learningPath.modules.map(module => (
+                        <ModuleView key={module.title} module={module} onSelectLesson={onSelectLesson} activeLessonId={activeLessonId} />
+                    ))
+                ) : (
+                    <AchievementsView achievements={achievements} />
+                )}
             </div>
         </div>
       </aside>
