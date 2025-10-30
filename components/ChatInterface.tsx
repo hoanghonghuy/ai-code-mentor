@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon } from './icons';
@@ -10,23 +9,95 @@ interface ChatInterfaceProps {
 }
 
 const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
-  const parts = text.split(/(\`\`\`[\s\S]*?\`\`\`|\`[^\`]*?\`)/g);
+  // 1. Helper to parse inline elements: **bold**, *italic*, `code`
+  const parseInline = (line: string): React.ReactNode => {
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+    // Regex to find bold (**text** or __text__), italic (*text* or _text_), or inline code (`code`)
+    const regex = /(\*\*|__)(.*?)\1|(\*|_)(.*?)\3|(`)(.*?)\5/g;
+    let match;
+
+    while ((match = regex.exec(line)) !== null) {
+      // Add preceding text
+      if (match.index > lastIndex) {
+        elements.push(line.substring(lastIndex, match.index));
+      }
+      // Add the matched element
+      if (match[2] !== undefined) { // Bold
+        elements.push(<strong key={match.index}>{match[2]}</strong>);
+      } else if (match[4] !== undefined) { // Italic
+        elements.push(<em key={match.index}>{match[4]}</em>);
+      } else if (match[6] !== undefined) { // Code
+        elements.push(<code key={match.index} className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded-md font-mono text-sm">{match[6]}</code>);
+      }
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < line.length) {
+      elements.push(line.substring(lastIndex));
+    }
+
+    return <>{elements}</>;
+  };
+
+  // 2. Split text by code blocks to isolate them
+  const blocks = text.split(/(```[\s\S]*?```)/g);
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none">
-      {parts.map((part, index) => {
-        if (part.startsWith('```')) {
-          const code = part.replace(/```(javascript|js|python|py|html|css|bash|sh)?\n?/, '').replace(/```$/, '');
-          return <pre key={index} className="bg-gray-200 dark:bg-gray-800 p-3 rounded-md overflow-x-auto"><code className="font-mono text-sm">{code}</code></pre>;
+    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+      {blocks.map((block, index) => {
+        if (!block) return null;
+
+        // 3. Render code blocks
+        if (block.startsWith('```')) {
+          const code = block.replace(/^```(?:javascript|js|python|py|html|css|bash|sh)?\n?/, '').replace(/```$/, '');
+          return (
+            <pre key={index} className="bg-gray-200 dark:bg-gray-800 p-3 my-2 rounded-md overflow-x-auto">
+              <code className="font-mono text-sm">{code.trim()}</code>
+            </pre>
+          );
         }
-        if (part.startsWith('`')) {
-            return <code key={index} className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded-md font-mono text-sm">{part.slice(1, -1)}</code>
-        }
-        return <span key={index}>{part}</span>;
+
+        // 4. Process and render text blocks, splitting by paragraphs
+        const paragraphs = block.trim().split(/\n{2,}/g);
+        return paragraphs.map((para, paraIndex) => {
+          if (!para.trim()) return null;
+
+          const key = `${index}-${paraIndex}`;
+          // 5. Check for lists
+          const lines = para.split('\n');
+          const isUnorderedList = lines.length > 0 && lines.every(line => line.trim().startsWith('* ') || line.trim().startsWith('- '));
+          const isOrderedList = lines.length > 0 && lines.every(line => /^\d+\.\s/.test(line.trim()));
+
+          if (isUnorderedList) {
+            return (
+              <ul key={key} className="list-disc pl-5 my-2 space-y-1">
+                {lines.map((item, i) => (
+                  <li key={i}>{parseInline(item.replace(/^(\*|-)\s/, ''))}</li>
+                ))}
+              </ul>
+            );
+          }
+
+          if (isOrderedList) {
+            return (
+              <ol key={key} className="list-decimal pl-5 my-2 space-y-1">
+                {lines.map((item, i) => (
+                  <li key={i}>{parseInline(item.replace(/^\d+\.\s/, ''))}</li>
+                ))}
+              </ol>
+            );
+          }
+
+          // 6. Render as a paragraph
+          return <p key={key} className="my-2">{parseInline(para)}</p>;
+        });
       })}
     </div>
   );
 };
+
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading }) => {
   const [input, setInput] = useState('');
@@ -98,4 +169,3 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
 };
 
 export default ChatInterface;
-   
