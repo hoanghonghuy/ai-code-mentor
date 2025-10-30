@@ -1,0 +1,5 @@
+{
+  "name": "AI Code Mentor",
+  "description": "An intelligent programming learning platform using the Gemini API. It acts as a professional AI mentor, guiding learners step-by-step to build real-world products with a minimalist, friendly interface focused on a personalized learning experience.",
+  "requestFramePermissions": []
+}
