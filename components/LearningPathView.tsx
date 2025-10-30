@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep } from '../types';
-import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon } from './icons';
+import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep, CustomProject } from '../types';
+import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon } from './icons';
 import AchievementsView from './AchievementsView';
 import SettingsView from './SettingsView';
+import CustomProjectView from './CustomProjectView';
 
 interface LearningPathProps {
+  activeView: 'learningPath' | 'customProject';
+  setActiveView: (view: 'learningPath' | 'customProject') => void;
   learningPath: LearningPath;
   onSelectLesson: (item: Lesson | ProjectStep) => void;
   activeLessonId: string | null;
@@ -19,6 +22,10 @@ interface LearningPathProps {
   customDocs: string[];
   onAddDoc: (url: string) => void;
   onRemoveDoc: (index: number) => void;
+  customProjects: CustomProject[];
+  activeCustomProjectId: string | null;
+  onSelectCustomProject: (projectId: string) => void;
+  onNewProject: () => void;
 }
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
@@ -109,7 +116,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
     const totalLessons = module.lessons.length;
     const progress = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
     
-    if (lessonsToShow.length === 0) return null;
+    if (lessonsToShow.length === 0 && showOnlyBookmarked) return null;
 
     return (
         <div className="mb-4">
@@ -160,18 +167,28 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
     )
 }
 
-const LearningPathView: React.FC<LearningPathProps> = ({ learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc }) => {
-  const [activeTab, setActiveTab] = useState<'path' | 'achievements' | 'settings'>('path');
+const LearningPathView: React.FC<LearningPathProps> = (props) => {
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject } = props;
+  const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   
   const allItems = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
   const completedItems = allItems.filter(item => item.completed).length;
   const overallProgress = allItems.length > 0 ? (completedItems / allItems.length) * 100 : 0;
 
-  const TabButton: React.FC<{tabId: 'path' | 'achievements' | 'settings', children: React.ReactNode, icon?: React.ReactNode}> = ({ tabId, children, icon }) => (
+  const TabButton: React.FC<{tabId: 'lessons' | 'achievements' | 'settings', children: React.ReactNode}> = ({ tabId, children }) => (
     <button
         onClick={() => setActiveTab(tabId)}
         className={`flex-1 py-2 text-sm font-semibold rounded-md flex items-center justify-center gap-2 ${activeTab === tabId ? 'bg-primary-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+    >
+        {children}
+    </button>
+  );
+
+  const ViewToggleButton: React.FC<{viewId: 'learningPath' | 'customProject', children: React.ReactNode, icon: React.ReactNode}> = ({ viewId, children, icon }) => (
+    <button
+        onClick={() => setActiveView(viewId)}
+        className={`w-full flex items-center justify-center gap-2 p-3 text-sm font-bold border-b-2 ${activeView === viewId ? 'text-primary-600 dark:text-primary-400 border-primary-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 border-transparent'}`}
     >
         {icon}{children}
     </button>
@@ -181,63 +198,80 @@ const LearningPathView: React.FC<LearningPathProps> = ({ learningPath, onSelectL
     <>
       <aside className={`absolute md:static z-20 h-full flex-shrink-0 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-start justify-between mb-2">
+            <div className="flex-shrink-0">
+                <div className="flex items-start justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-lg font-bold">
-                        {activeTab === 'path' ? 'Learning Path' : activeTab === 'achievements' ? 'Achievements' : 'Settings'}
+                        {activeView === 'learningPath' ? learningPath.title : 'My Projects'}
                     </h2>
                     <button onClick={() => setIsOpen(false)} className="md:hidden p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
                         <XIcon className="w-5 h-5" />
                     </button>
                 </div>
-                 <div className="mb-4">
-                    <select
-                        id="learning-path-select"
-                        value={activePathId}
-                        onChange={(e) => onSelectPath(e.target.value as LearningPathId)}
-                        className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                        {allPaths.map(path => (
-                            <option key={path.id} value={path.id}>{path.title}</option>
-                        ))}
-                    </select>
+                 <div className="flex border-b border-gray-200 dark:border-gray-700">
+                    <ViewToggleButton viewId="learningPath" icon={<CodeIcon className="w-5 h-5" />}>Learning</ViewToggleButton>
+                    <ViewToggleButton viewId="customProject" icon={<FolderIcon className="w-5 h-5" />}>Projects</ViewToggleButton>
                 </div>
-                {activeTab === 'path' && (
-                     <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <ProgressBar value={overallProgress} />
-                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{Math.round(overallProgress)}%</span>
+            </div>
+            {activeView === 'learningPath' ? (
+                <>
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="mb-4">
+                            <select
+                                id="learning-path-select"
+                                value={activePathId}
+                                onChange={(e) => onSelectPath(e.target.value as LearningPathId)}
+                                className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
+                                {allPaths.map(path => (
+                                    <option key={path.id} value={path.id}>{path.title}</option>
+                                ))}
+                            </select>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
-                            <input 
-                                type="checkbox"
-                                checked={showOnlyBookmarked}
-                                onChange={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
-                                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 bg-gray-100 dark:bg-gray-900"
-                            />
-                            Show Bookmarked Only
-                        </label>
+                        {activeTab === 'lessons' && (
+                             <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <ProgressBar value={overallProgress} />
+                                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{Math.round(overallProgress)}%</span>
+                                </div>
+                                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
+                                    <input 
+                                        type="checkbox"
+                                        checked={showOnlyBookmarked}
+                                        onChange={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
+                                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 bg-gray-100 dark:bg-gray-900"
+                                    />
+                                    Show Bookmarked Only
+                                </label>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
-            <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 space-x-1">
-                    <TabButton tabId="path">Lessons</TabButton>
-                    <TabButton tabId="achievements">Achievements</TabButton>
-                    <TabButton tabId="settings" icon={<SettingsIcon className="w-4 h-4"/>}>Settings</TabButton>
-                </div>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto">
-                {activeTab === 'path' ? (
-                     learningPath.modules.map((module, index) => (
-                        <ModuleView key={`${module.title}-${index}`} module={module} onSelectLesson={onSelectLesson} activeLessonId={activeLessonId} bookmarkedLessonIds={bookmarkedLessonIds} onToggleBookmark={onToggleBookmark} showOnlyBookmarked={showOnlyBookmarked} />
-                    ))
-                ) : activeTab === 'achievements' ? (
-                    <AchievementsView achievements={achievements} />
-                ) : (
-                    <SettingsView customDocs={customDocs} onAddDoc={onAddDoc} onRemoveDoc={onRemoveDoc} />
-                )}
-            </div>
+                    <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 space-x-1">
+                            <TabButton tabId="lessons">Lessons</TabButton>
+                            <TabButton tabId="achievements">Achievements</TabButton>
+                            <TabButton tabId="settings">Settings</TabButton>
+                        </div>
+                    </div>
+                    <div className="flex-1 p-4 overflow-y-auto">
+                        {activeTab === 'lessons' ? (
+                            learningPath.modules.map((module, index) => (
+                                <ModuleView key={`${module.title}-${index}`} module={module} onSelectLesson={onSelectLesson} activeLessonId={activeLessonId} bookmarkedLessonIds={bookmarkedLessonIds} onToggleBookmark={onToggleBookmark} showOnlyBookmarked={showOnlyBookmarked} />
+                            ))
+                        ) : activeTab === 'achievements' ? (
+                            <AchievementsView achievements={achievements} />
+                        ) : (
+                            <SettingsView customDocs={customDocs} onAddDoc={onAddDoc} onRemoveDoc={onRemoveDoc} />
+                        )}
+                    </div>
+                </>
+            ) : (
+                <CustomProjectView 
+                    projects={customProjects}
+                    activeProjectId={activeCustomProjectId}
+                    onSelectProject={onSelectCustomProject}
+                    onNewProject={onNewProject}
+                />
+            )}
         </div>
       </aside>
        {isOpen && <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/30 z-10 md:hidden"></div>}

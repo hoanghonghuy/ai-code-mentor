@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
@@ -9,7 +9,7 @@ import Notification from './components/Notification';
 import { TrophyIcon, NoteIcon, PlayIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
-import SettingsView from './components/SettingsView';
+import NewProjectModal from './components/NewProjectModal';
 
 const getInitialAchievements = (pathTitle: string): Achievement[] => {
     const definitions: Omit<Achievement, 'unlocked'>[] = [
@@ -30,16 +30,26 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
+  // View mode state
+  const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
+
+  // Learning Path State
   const [activePathId, setActivePathId] = useState<LearningPathId>('js-basics');
   const [learningPath, setLearningPath] = useState<LearningPath>(learningPaths[activePathId]);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
-  
+  const [learningPathMessages, setLearningPathMessages] = useState<ChatMessage[]>([]);
+
+  // Custom Project State
+  const [customProjects, setCustomProjects] = useState<CustomProject[]>([]);
+  const [activeCustomProjectId, setActiveCustomProjectId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Gamification State
   const [points, setPoints] = useState(0);
   const [achievements, setAchievements] = useState<Achievement[]>(getInitialAchievements(learningPath.title));
   const [notification, setNotification] = useState<Achievement | null>(null);
 
-  // New State for features
+  // Tools State
   const [notes, setNotes] = useState<{ [key: string]: string }>({});
   const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>([]);
   const [customDocs, setCustomDocs] = useState<string[]>(['https://react.dev', 'https://developer.mozilla.org/']);
@@ -60,14 +70,26 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+  
+  // Effect to switch message history based on active view
+  useEffect(() => {
+      if (activeView === 'learningPath') {
+          setMessages(learningPathMessages);
+      } else if (activeView === 'customProject' && activeCustomProjectId) {
+          const activeProject = customProjects.find(p => p.id === activeCustomProjectId);
+          setMessages(activeProject ? activeProject.chatHistory : []);
+      } else {
+          setMessages([]);
+      }
+  }, [activeView, activeCustomProjectId, learningPathMessages, customProjects]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const startNewChat = useCallback(() => {
-    if (!ai) return;
-    const newChat = ai.chats.create({
+  const createChatInstance = useCallback(() => {
+     if (!ai) return null;
+     return ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
         systemInstruction: `You are an expert AI programming mentor. 
@@ -75,27 +97,21 @@ const App: React.FC = () => {
         Explain concepts clearly, provide step-by-step instructions, analyze code, and give constructive feedback. 
         Keep your explanations concise, friendly, and focused. 
         Use markdown for formatting, especially for code blocks (e.g., \`\`\`javascript).
-        When a user starts a lesson or project step, greet them and begin teaching the topic immediately.`,
+        When a user starts a lesson, project step, or a new custom project, greet them and begin the process immediately.`,
         tools: [{googleSearch: {}}],
       },
     });
-    setChat(newChat);
-    setMessages([]);
-    return newChat;
   }, [ai]);
 
   useEffect(() => {
-    if(ai) {
-        startNewChat();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ai]);
+    setChat(createChatInstance());
+  }, [createChatInstance]);
 
   const showNotification = (achievement: Achievement) => {
     setNotification(achievement);
     setTimeout(() => {
         setNotification(null);
-    }, 5000); // Notification disappears after 5 seconds
+    }, 5000);
   };
 
   const unlockAchievement = useCallback((id: string) => {
@@ -109,7 +125,6 @@ const App: React.FC = () => {
     });
   }, []);
   
-  // Handlers for new features
   const handleNoteChange = useCallback((lessonId: string, newNote: string) => {
     setNotes(prev => ({ ...prev, [lessonId]: newNote }));
   }, []);
@@ -130,18 +145,32 @@ const App: React.FC = () => {
     setCustomDocs(prev => prev.filter((_, index) => index !== indexToRemove));
   }, []);
 
-  const handleSendMessage = useCallback(async (message: string) => {
-    if (!chat) return;
+  const handleSendMessage = useCallback(async (message: string, isSystemMessage = false) => {
+    const currentChatInstance = createChatInstance();
+    if (!currentChatInstance) return;
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Determine where to save the message
+    let currentMessages: ChatMessage[] = [];
+    if (!isSystemMessage) {
+        currentMessages = [...messages, userMessage];
+        setMessages(currentMessages);
+    } else {
+        currentMessages = messages;
+    }
+
+
     setIsLoading(true);
 
     try {
-      const result = await chat.sendMessageStream({ message });
+      const result = await currentChatInstance.sendMessageStream({ message });
       let text = '';
       let groundingChunks: GroundingChunk[] = [];
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: '' }] }]);
+      
+      const modelMessage: ChatMessage = { role: 'model', parts: [{ text: '' }] };
+      currentMessages = [...currentMessages, modelMessage];
+      setMessages(currentMessages);
       
       for await (const chunk of result) {
         text += chunk.text;
@@ -149,101 +178,112 @@ const App: React.FC = () => {
             groundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
         }
 
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          newMessages[newMessages.length - 1] = { 
+        const updatedMessages = [...currentMessages];
+        const lastMessage = updatedMessages[updatedMessages.length - 1];
+        updatedMessages[updatedMessages.length - 1] = { 
             ...lastMessage,
             parts: [{ text }],
             groundingChunks: groundingChunks.length > 0 ? groundingChunks : undefined,
           };
-          return newMessages;
-        });
+        setMessages(updatedMessages);
+        currentMessages = updatedMessages;
       }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = { role: 'model', parts: [{ text: "Sorry, I encountered an error. Please try again." }] };
-      setMessages(prev => [...prev, errorMessage]);
+      currentMessages = [...currentMessages, errorMessage];
+      setMessages(currentMessages);
     } finally {
       setIsLoading(false);
+      // Persist the final state of messages
+      if (activeView === 'learningPath') {
+        setLearningPathMessages(currentMessages);
+      } else if (activeView === 'customProject' && activeCustomProjectId) {
+        setCustomProjects(prev => prev.map(p => p.id === activeCustomProjectId ? { ...p, chatHistory: currentMessages } : p));
+      }
     }
-  }, [chat]);
+  }, [messages, createChatInstance, activeView, activeCustomProjectId]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
   }, [unlockAchievement]);
   
   const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
-    const currentChat = startNewChat();
-    if (currentChat) {
-      handleSendMessage(item.prompt);
-    }
+    setActiveView('learningPath');
+    setLearningPathMessages([]);
+    handleSendMessage(item.prompt, true);
     setActiveLessonId(item.id);
-
+    
     setLearningPath(currentPath => {
         let itemAlreadyCompleted = false;
-
         const newPath = { ...currentPath, modules: currentPath.modules.map(module => {
-            if (module.lessons) {
-                const lesson = module.lessons.find(l => l.id === item.id);
-                if (lesson) {
-                    itemAlreadyCompleted = lesson.completed;
-                    return { ...module, lessons: module.lessons.map(l => l.id === item.id ? { ...l, completed: true } : l) };
-                }
-            } else if (module.project) {
-                const step = module.project.steps.find(s => s.id === item.id);
-                 if (step) {
-                    itemAlreadyCompleted = step.completed;
-                    return { ...module, project: { ...module.project, steps: module.project.steps.map(s => s.id === item.id ? { ...s, completed: true } : s) }};
-                }
+            if (module.lessons?.find(l => l.id === item.id)) {
+                itemAlreadyCompleted = module.lessons.find(l => l.id === item.id)!.completed;
+                return { ...module, lessons: module.lessons.map(l => l.id === item.id ? { ...l, completed: true } : l) };
+            } else if (module.project?.steps.find(s => s.id === item.id)) {
+                itemAlreadyCompleted = module.project.steps.find(s => s.id === item.id)!.completed;
+                return { ...module, project: { ...module.project, steps: module.project.steps.map(s => s.id === item.id ? { ...s, completed: true } : s) }};
             }
             return module;
         })};
 
-        // Award points only for the first completion
         if (!itemAlreadyCompleted) {
             setPoints(p => p + 10);
             unlockAchievement('first-lesson');
         }
 
-        // Check for module/project/path completion
-        const updatedModule = newPath.modules.find(m => 
-            m.lessons?.some(l => l.id === item.id) || m.project?.steps.some(s => s.id === item.id)
-        );
-
+        const updatedModule = newPath.modules.find(m => m.lessons?.some(l => l.id === item.id) || m.project?.steps.some(s => s.id === item.id));
         if (updatedModule) {
-            if (updatedModule.lessons && updatedModule.lessons.every(l => l.completed)) {
-                unlockAchievement('first-module');
-            }
-            if (updatedModule.project && updatedModule.project.steps.every(s => s.completed)) {
-                unlockAchievement('project-builder');
-            }
+            if (updatedModule.lessons?.every(l => l.completed)) unlockAchievement('first-module');
+            if (updatedModule.project?.steps.every(s => s.completed)) unlockAchievement('project-builder');
         }
         
-        const allLessonsAndSteps = newPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
-        if (allLessonsAndSteps.every(i => i.completed)) {
-            unlockAchievement('path-complete');
-        }
+        const allItems = newPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
+        if (allItems.every(i => i.completed)) unlockAchievement('path-complete');
         
         return newPath;
     });
 
-    if (window.innerWidth < 768) {
-        setSidebarOpen(false);
-    }
-  }, [startNewChat, handleSendMessage, unlockAchievement]);
+    if (window.innerWidth < 768) setSidebarOpen(false);
+  }, [handleSendMessage, unlockAchievement]);
 
   const handleSelectPath = useCallback((pathId: LearningPathId) => {
     setActivePathId(pathId);
-    
-    // Reset progress for the new path
-    const newPathData = learningPaths[pathId];
+    const newPathData = JSON.parse(JSON.stringify(learningPaths[pathId]));
     setLearningPath(newPathData);
     setAchievements(getInitialAchievements(newPathData.title));
     setPoints(0);
     setActiveLessonId(null);
-    startNewChat();
-  }, [startNewChat]);
+    setLearningPathMessages([]);
+    setActiveView('learningPath');
+  }, []);
+
+  const handleCreateCustomProject = useCallback((name: string, goal: string) => {
+    const newProject: CustomProject = {
+      id: `proj-${Date.now()}`,
+      name,
+      goal,
+      chatHistory: [],
+    };
+    setCustomProjects(prev => [...prev, newProject]);
+    setActiveCustomProjectId(newProject.id);
+    setActiveView('customProject');
+    setIsModalOpen(false);
+    
+    const kickstartPrompt = `Start a new custom project with me.
+    My project is called: "${name}"
+    My main goal is: "${goal}"
+    
+    First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
+    
+    handleSendMessage(kickstartPrompt, true);
+  }, [handleSendMessage]);
+
+  const handleSelectCustomProject = useCallback((projectId: string) => {
+    setActiveCustomProjectId(projectId);
+    setActiveView('customProject');
+    if (window.innerWidth < 768) setSidebarOpen(false);
+  }, []);
 
   const activeLesson = useMemo(() => {
     if (!activeLessonId) return null;
@@ -267,6 +307,8 @@ const App: React.FC = () => {
       <Header theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} points={points} />
       <div className="flex flex-1 overflow-hidden">
         <LearningPathView 
+          activeView={activeView}
+          setActiveView={setActiveView}
           learningPath={learningPath} 
           onSelectLesson={handleSelectLesson}
           activeLessonId={activeLessonId}
@@ -281,6 +323,10 @@ const App: React.FC = () => {
           customDocs={customDocs}
           onAddDoc={handleAddCustomDoc}
           onRemoveDoc={handleRemoveCustomDoc}
+          customProjects={customProjects}
+          activeCustomProjectId={activeCustomProjectId}
+          onSelectCustomProject={handleSelectCustomProject}
+          onNewProject={() => setIsModalOpen(true)}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
@@ -311,6 +357,7 @@ const App: React.FC = () => {
                     note={activeLessonId ? notes[activeLessonId] || '' : ''}
                     onNoteChange={(newNote) => activeLessonId && handleNoteChange(activeLessonId, newNote)}
                     activeLessonTitle={activeLesson?.title || null}
+                    disabled={activeView === 'customProject'}
                   />
                 )}
               </div>
@@ -319,6 +366,7 @@ const App: React.FC = () => {
         </main>
       </div>
       <Notification achievement={notification} />
+      {isModalOpen && <NewProjectModal onClose={() => setIsModalOpen(false)} onCreateProject={handleCreateCustomProject} />}
     </div>
   );
 };

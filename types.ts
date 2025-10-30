@@ -56,6 +56,13 @@ export interface Achievement {
   icon: React.ElementType;
 }
 
+export interface CustomProject {
+  id: string;
+  name: string;
+  goal: string;
+  chatHistory: ChatMessage[];
+}
+
 export type Theme = 'light' | 'dark';
 
 export interface AppContextType {
