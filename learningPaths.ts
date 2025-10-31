@@ -47,6 +47,15 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ]
             },
             {
+                title: 'Module 6: Modern JavaScript (ES6+)',
+                lessons: [
+                    { id: 'js-6-1', title: 'Arrow Functions', prompt: 'What are arrow functions in ES6? Explain their syntax and how `this` works differently compared to traditional functions.', completed: false },
+                    { id: 'js-6-2', title: 'Destructuring', prompt: 'Teach me about array and object destructuring in ES6. Provide examples for both.', completed: false },
+                    { id: 'js-6-3', title: 'Spread & Rest Operators', prompt: 'Explain the spread (`...`) and rest (`...`) operators. Show a practical example for each.', completed: false },
+                    { id: 'js-6-4', title: 'Modules', prompt: 'What are JavaScript modules? Explain `import` and `export` syntax for sharing code between files.', completed: false },
+                ]
+            },
+            {
                 title: 'Project: Build a Todo List App',
                 project: {
                     id: 'proj-todo-app',
@@ -58,6 +67,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                         { id: 'proj-todo-3', title: 'Step 3: Add New Tasks with JS', prompt: 'Teach me the JavaScript to add a new task. I need to get the value from the input, create a new list item, and append it to the task list when the button is clicked.', completed: false },
                         { id: 'proj-todo-4', title: 'Step 4: Mark Tasks as Complete', prompt: 'How can I add functionality to mark a task as complete? Let\'s make it so clicking on a task toggles a "completed" class that adds a line-through style.', completed: false },
                         { id: 'proj-todo-5', title: 'Step 5: Remove Tasks', prompt: 'I need a way to remove tasks. Help me add a "delete" button to each task item and write the JavaScript to remove the item from the list when its delete button is clicked.', completed: false },
+                        { id: 'proj-todo-6', title: 'Step 6: Persist with Local Storage', prompt: 'My todos disappear when I refresh the page. Teach me how to use `localStorage` to save the tasks and load them when the app starts.', completed: false },
                     ]
                 }
             }
@@ -79,7 +89,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 title: 'Module 2: Data Structures',
                 lessons: [
                     { id: 'py-2-1', title: 'Lists', prompt: 'Introduce me to Lists in Python. How do I create them, access items, and add or remove elements?', completed: false },
-                    { id: 'py-2-2', title: 'Tuples', prompt: 'What is a Tuple in Python and how is it different from a List? Provide an example.', completed: false },
+                    { id: 'py-2-2', title: 'Tuples & Sets', prompt: 'What is a Tuple in Python and how is it different from a List? Also, introduce me to Sets for storing unique items.', completed: false },
                     { id: 'py-2-3', title: 'Dictionaries', prompt: 'Teach me about Dictionaries in Python for key-value storage. How do I create one and access its values?', completed: false },
                 ],
             },
@@ -87,7 +97,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 title: 'Module 3: Control Flow',
                 lessons: [
                     { id: 'py-3-1', title: 'Conditional Logic', prompt: 'Explain `if`, `elif`, and `else` statements in Python with a code example.', completed: false },
-                    { id: 'py-3-2', title: 'For Loops', prompt: 'How do `for` loops work in Python? Show me how to iterate over a list of items.', completed: false },
+                    { id: 'py-3-2', title: 'For Loops', prompt: 'How do `for` loops work in Python? Show me how to iterate over a list of items and use the `range()` function.', completed: false },
                     { id: 'py-3-3', title: 'While Loops', prompt: 'Explain `while` loops in Python and provide an example of a loop that counts down from 5.', completed: false },
                 ],
             },
@@ -96,7 +106,15 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'py-4-1', title: 'Defining Functions', prompt: 'Teach me how to define and call my own functions in Python using the `def` keyword. Include parameters and return values.', completed: false },
                     { id: 'py-4-2', title: 'Variable Scope', prompt: 'Explain local and global variables in Python. What is the scope of a variable?', completed: false },
-                    { id: 'py-4-3', title: 'Importing Modules', prompt: 'How do I use code from other files or libraries? Explain the `import` statement, using the `math` module as an example.', completed: false },
+                    { id: 'py-4-3', title: 'Importing Modules', prompt: 'How do I use code from other files or libraries? Explain the `import` statement, using the `math` and `random` modules as examples.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 5: Object-Oriented Programming',
+                lessons: [
+                    { id: 'py-5-1', title: 'Classes and Objects', prompt: 'Introduce me to Object-Oriented Programming in Python. How do I define a class and create an object (instance)?', completed: false },
+                    { id: 'py-5-2', title: 'The __init__ Method', prompt: 'What is the `__init__` method (constructor) in a Python class? Show me how to use it to initialize object properties.', completed: false },
+                    { id: 'py-5-3', title: 'Inheritance', prompt: 'Explain the concept of inheritance in Python. Create a base class and a subclass that inherits from it.', completed: false },
                 ],
             },
             {
@@ -108,8 +126,9 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     steps: [
                         { id: 'proj-py-calc-1', title: 'Step 1: Get User Input', prompt: 'Guide me to write Python code that asks the user for two numbers and an operator (+, -, *, /).', completed: false },
                         { id: 'proj-py-calc-2', title: 'Step 2: Perform Calculation', prompt: 'Help me write the logic using `if/elif/else` to check which operator was entered and perform the correct calculation.', completed: false },
-                        { id: 'proj-py-calc-3', title: 'Step 3: Handle Division by Zero', prompt: 'What happens if the user tries to divide by zero? Help me add a check to prevent this error and print a warning message.', completed: false },
-                        { id: 'proj-py-calc-4', title: 'Step 4: Put it in a Loop', prompt: 'How can I make the calculator run continuously? Guide me to wrap the code in a `while` loop so the user can perform multiple calculations.', completed: false },
+                        { id: 'proj-py-calc-3', title: 'Step 3: Handle Errors', prompt: 'What happens if the user tries to divide by zero or enters invalid input? Help me add `try-except` blocks to handle these errors gracefully.', completed: false },
+                        { id: 'proj-py-calc-4', title: 'Step 4: Refactor into Functions', prompt: 'Let\'s make our code cleaner. Guide me to refactor the calculation logic into its own function.', completed: false },
+                        { id: 'proj-py-calc-5', title: 'Step 5: Put it in a Loop', prompt: 'How can I make the calculator run continuously? Guide me to wrap the code in a `while` loop so the user can perform multiple calculations and choose to exit.', completed: false },
                     ]
                 }
             }
@@ -132,15 +151,24 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'cs-2-1', title: 'If/Else Statements', prompt: 'Explain `if` and `else` statements in C# for conditional logic.', completed: false },
                     { id: 'cs-2-2', title: 'Switch Statements', prompt: 'What is a `switch` statement in C# and when is it useful? Provide an example.', completed: false },
-                    { id: 'cs-2-3', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in C#.', completed: false },
+                    { id: 'cs-2-3', title: 'Loops', prompt: 'Teach me about `for`, `while`, and `do-while` loops in C#.', completed: false },
                 ],
             },
             {
-                title: 'Module 3: Methods and Classes',
+                title: 'Module 3: Data Structures',
                 lessons: [
-                    { id: 'cs-3-1', title: 'Writing Methods', prompt: 'How do I write my own methods in C#? Explain parameters, return types, and the `static` keyword.', completed: false },
-                    { id: 'cs-3-2', title: 'Understanding Classes', prompt: 'What is a class in C#? Explain the concept of a class as a blueprint for objects.', completed: false },
-                    { id: 'cs-3-3', title: 'Creating Objects', prompt: 'Show me how to create a simple `Person` class and create an instance (object) of it.', completed: false },
+                    { id: 'cs-3-1', title: 'Arrays', prompt: 'Introduce me to single-dimensional and multi-dimensional arrays in C#.', completed: false },
+                    { id: 'cs-3-2', title: 'Lists', prompt: 'What is a `List<T>` in C#? How is it different from an array, and how do I use it?', completed: false },
+                    { id: 'cs-3-3', title: 'Dictionaries', prompt: 'Teach me how to use a `Dictionary<TKey, TValue>` in C# to store key-value pairs.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 4: Methods and Classes (OOP)',
+                lessons: [
+                    { id: 'cs-4-1', title: 'Writing Methods', prompt: 'How do I write my own methods in C#? Explain parameters, return types, and the `static` keyword.', completed: false },
+                    { id: 'cs-4-2', title: 'Classes & Objects', prompt: 'Explain classes as blueprints for objects. Show me how to create a simple `Person` class with fields.', completed: false },
+                    { id: 'cs-4-3', title: 'Constructors & Properties', prompt: 'What are constructors? And how do I use Properties (getters/setters) to encapsulate data in C#?', completed: false },
+                    { id: 'cs-4-4', title: 'Inheritance', prompt: 'Teach me about inheritance in C#. Create a base class and a derived class.', completed: false },
                 ],
             },
             {
@@ -151,9 +179,10 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     description: 'Build the foundation for a simple text-based adventure game.',
                     steps: [
                         { id: 'proj-cs-adv-1', title: 'Step 1: The Game Loop', prompt: 'Guide me to set up a `while` loop that keeps the game running. It should prompt the user for a command each turn.', completed: false },
-                        { id: 'proj-cs-adv-2', title: 'Step 2: The Player', prompt: 'Help me create a simple `Player` class in C# that has properties for `Name` and `Health`.', completed: false },
-                        { id: 'proj-cs-adv-3', title: 'Step 3: Simple Commands', prompt: 'Teach me how to use an `if/else` or `switch` statement to handle simple commands like "look" and "quit".', completed: false },
-                        { id: 'proj-cs-adv-4', title: 'Step 4: A Basic Room', prompt: 'Let\'s create a `Room` class with a `Description`. The "look" command should print the description of the current room.', completed: false },
+                        { id: 'proj-cs-adv-2', title: 'Step 2: The Player Class', prompt: 'Help me create a `Player` class in C# that has properties for `Name` and `Health`.', completed: false },
+                        { id: 'proj-cs-adv-3', title: 'Step 3: The Room Class', prompt: 'Let\'s create a `Room` class with a `Description` and `Name`. The "look" command should print the description of the current room.', completed: false },
+                        { id: 'proj-cs-adv-4', title: 'Step 4: Simple Commands', prompt: 'Teach me how to use a `switch` statement to handle simple commands like "look" and "quit".', completed: false },
+                        { id: 'proj-cs-adv-5', title: 'Step 5: Moving Between Rooms', prompt: 'How can the player move? Modify the `Room` class to have exits (e.g., North, South). Help me implement a "go north" command.', completed: false },
                     ]
                 }
             }
@@ -174,17 +203,25 @@ const allPaths: Record<LearningPathId, LearningPath> = {
             {
                 title: 'Module 2: Data Structures',
                 lessons: [
-                    { id: 'go-2-1', title: 'Arrays', prompt: 'Explain fixed-size arrays in Go. How are they declared and used?', completed: false },
-                    { id: 'go-2-2', title: 'Slices', prompt: 'What are slices in Go? Explain how they are more flexible than arrays. Show me how to create and append to a slice.', completed: false },
-                    { id: 'go-2-3', title: 'Maps', prompt: 'Teach me about maps in Go for key-value storage. How do I create a map and add data to it?', completed: false },
+                    { id: 'go-2-1', title: 'Arrays vs. Slices', prompt: 'Explain fixed-size arrays and flexible slices in Go. Show me how to create and append to a slice.', completed: false },
+                    { id: 'go-2-2', title: 'Maps', prompt: 'Teach me about maps in Go for key-value storage. How do I create a map, add data, and check if a key exists?', completed: false },
+                    { id: 'go-2-3', title: 'Structs', prompt: 'What are structs in Go? Show me how to define a custom data structure, like a `user` struct.', completed: false },
                 ],
             },
             {
-                title: 'Module 3: Control & Concurrency',
+                title: 'Module 3: Control Flow & Functions',
                 lessons: [
-                    { id: 'go-3-1', title: 'Control Flow', prompt: 'Show me how to use `if/else` and `for` loops in Go. How is the `for` loop in Go different from other languages?', completed: false },
-                    { id: 'go-3-2', title: 'Functions Deep Dive', prompt: 'Explain how functions in Go can return multiple values. Provide a simple example.', completed: false },
-                    { id: 'go-3-3', title: 'Intro to Goroutines', prompt: 'What is a goroutine? Give a very simple explanation of how to start one using the `go` keyword for concurrent execution.', completed: false },
+                    { id: 'go-3-1', title: 'Control Flow', prompt: 'Show me how to use `if/else` and `for` loops in Go. How is the `for` loop in Go used for `while` and infinite loops?', completed: false },
+                    { id: 'go-3-2', title: 'Functions Deep Dive', prompt: 'Explain how functions in Go can return multiple values, especially for error handling. Provide a simple example.', completed: false },
+                    { id: 'go-3-3', title: 'Pointers', prompt: 'What are pointers in Go? Explain when and why you would use them with a simple example.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 4: Concurrency & Advanced Topics',
+                lessons: [
+                    { id: 'go-4-1', title: 'Methods on Structs', prompt: 'How do I define a method for a struct I created? Show an example.', completed: false },
+                    { id: 'go-4-2', title: 'Interfaces', prompt: 'What are interfaces in Go? Explain their purpose with a common example like the `io.Reader` interface.', completed: false },
+                    { id: 'go-4-3', title: 'Intro to Goroutines', prompt: 'What is a goroutine? Give a very simple explanation of how to start one using the `go` keyword for concurrent execution.', completed: false },
                 ],
             },
             {
@@ -195,9 +232,10 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     description: 'Build a basic web scraper to fetch the title of a webpage.',
                     steps: [
                         { id: 'proj-go-scr-1', title: 'Step 1: HTTP GET Request', prompt: 'Guide me to write Go code to make an HTTP GET request to a website (e.g., "https://example.com") using the `net/http` package.', completed: false },
-                        { id: 'proj-go-scr-2', title: 'Step 2: Error Handling', prompt: 'Help me add error handling to the HTTP request. What should happen if the website is down?', completed: false },
-                        { id: 'proj-go-scr-3', title: 'Step 3: Read the Body', prompt: 'Teach me how to read the response body from the HTTP request into a string.', completed: false },
+                        { id: 'proj-go-scr-2', title: 'Step 2: Error Handling', prompt: 'Help me add proper error handling to the HTTP request. What should happen if the website is down?', completed: false },
+                        { id: 'proj-go-scr-3', title: 'Step 3: Read the Body', prompt: 'Teach me how to read the response body using `io.ReadAll` and close the body to prevent resource leaks.', completed: false },
                         { id: 'proj-go-scr-4', title: 'Step 4: Find the Title', prompt: 'How can I find the `<title>` tag in the HTML string? Guide me to use the `strings` package to extract the title.', completed:false },
+                        { id: 'proj-go-scr-5', title: 'Step 5: Scrape Multiple Sites', prompt: 'Let\'s make this concurrent. Guide me in creating a function to scrape a single site, then use goroutines to scrape a list of URLs at the same time.', completed:false },
                     ]
                 }
             }
@@ -212,15 +250,16 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'java-1-1', title: 'The JVM', prompt: 'What is the Java Virtual Machine (JVM) and why is it important for the Java language? Explain "write once, run anywhere".', completed: false },
                     { id: 'java-1-2', title: 'Classes and Objects', prompt: 'Introduce the fundamental concepts of classes and objects in Java. Provide a simple `Car` class example with fields and a constructor.', completed: false },
-                    { id: 'java-1-3', title: 'Control Flow', prompt: 'Teach me about `if/else` statements and `for` loops in Java.', completed: false },
+                    { id: 'java-1-3', title: 'Data Types & Control Flow', prompt: 'Teach me about primitive data types, `if/else` statements, and `for` loops in Java.', completed: false },
                 ],
             },
             {
                 title: 'Module 2: Object-Oriented Programming',
                 lessons: [
-                    { id: 'java-2-1', title: 'Methods', prompt: 'Explain methods in Java. How are they defined within a class and called on an object?', completed: false },
-                    { id: 'java-2-2', title: 'Inheritance', prompt: 'What is inheritance in Java? Explain with an example of a `Vehicle` superclass and a `Car` subclass.', completed: false },
-                    { id: 'java-2-3', title: 'Polymorphism', prompt: 'Explain the concept of polymorphism in Java. How can an object take many forms?', completed: false },
+                    { id: 'java-2-1', title: 'Methods', prompt: 'Explain methods in Java. How are they defined within a class and called on an object? Cover method overloading.', completed: false },
+                    { id: 'java-2-2', title: 'Encapsulation', prompt: 'What is encapsulation? Explain getters and setters and the `private` access modifier.', completed: false },
+                    { id: 'java-2-3', title: 'Inheritance', prompt: 'What is inheritance in Java? Explain with an example of a `Vehicle` superclass and a `Car` subclass using the `extends` keyword.', completed: false },
+                    { id: 'java-2-4', title: 'Polymorphism & Abstraction', prompt: 'Explain polymorphism and abstract classes in Java. How can an object take many forms?', completed: false },
                 ],
             },
             {
@@ -232,16 +271,24 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
             {
+                title: 'Module 4: Exception Handling',
+                lessons: [
+                    { id: 'java-4-1', title: 'Try-Catch Blocks', prompt: 'Introduce me to exception handling in Java using `try` and `catch` blocks.', completed: false },
+                    { id: 'java-4-2', title: 'Checked vs. Unchecked', prompt: 'What is the difference between checked and unchecked exceptions in Java?', completed: false },
+                ],
+            },
+            {
                 title: 'Project: Bank Account System',
                 project: {
                     id: 'proj-java-bank',
                     title: 'Project: Bank Account System',
                     description: 'Build a simple console application to manage a bank account.',
                     steps: [
-                        { id: 'proj-java-bank-1', title: 'Step 1: BankAccount Class', prompt: 'Guide me to create a `BankAccount` class in Java with properties for account number and balance, and methods for `deposit` and `withdraw`.', completed: false },
-                        { id: 'proj-java-bank-2', title: 'Step 2: Add Logic', prompt: 'Help me add logic to the `withdraw` method to prevent withdrawing more money than is in the account.', completed: false },
+                        { id: 'proj-java-bank-1', title: 'Step 1: BankAccount Class', prompt: 'Guide me to create a `BankAccount` class in Java with private fields for account number and balance, and a constructor.', completed: false },
+                        { id: 'proj-java-bank-2', title: 'Step 2: Add Methods', prompt: 'Help me add public methods for `deposit`, `withdraw`, and `getBalance`. Implement logic in `withdraw` to prevent overdrawing.', completed: false },
                         { id: 'proj-java-bank-3', title: 'Step 3: Main Application', prompt: 'Teach me how to create a `Main` class to run the application, create a `BankAccount` object, and perform some deposits and withdrawals.', completed: false },
-                        { id: 'proj-java-bank-4', title: 'Step 4: User Input', prompt: 'How can I get user input from the console? Guide me to use the `Scanner` class to let a user choose to deposit or withdraw.', completed: false },
+                        { id: 'proj-java-bank-4', title: 'Step 4: User Input', prompt: 'How can I get user input from the console? Guide me to use the `Scanner` class to let a user choose to deposit, withdraw, or check balance.', completed: false },
+                        { id: 'proj-java-bank-5', title: 'Step 5: Error Handling', prompt: 'Improve the application by adding exception handling for invalid user input (e.g., entering text instead of a number).', completed: false },
                     ]
                 }
             }
@@ -257,36 +304,45 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     { id: 'fe-1-1', title: 'HTML Structure', prompt: 'Explain the basic structure of an HTML document, including `<!DOCTYPE>`, `<html>`, `<head>`, and `<body>` tags.', completed: false },
                     { id: 'fe-1-2', title: 'CSS Fundamentals', prompt: 'Teach me how to style a simple HTML element using CSS. Explain selectors (tag, class, id), properties, and values.', completed: false },
                     { id: 'fe-1-3', title: 'The CSS Box Model', prompt: 'What is the CSS Box Model? Explain margin, border, padding, and content.', completed: false },
-                    { id: 'fe-1-4', title: 'Intro to Flexbox', prompt: 'Introduce me to CSS Flexbox. How can I use it to easily center an item inside a container?', completed: false },
+                    { id: 'fe-1-4', title: 'Flexbox & Grid', prompt: 'Introduce me to CSS Flexbox for 1D layouts and CSS Grid for 2D layouts. Show a simple example for each.', completed: false },
                 ],
             },
             {
                 title: 'Module 2: JavaScript for the Web',
                 lessons: [
-                     { id: 'fe-2-1', title: 'DOM Manipulation', prompt: 'Teach me how to use JavaScript to select an HTML element and change its text content.', completed: false },
+                     { id: 'fe-2-1', title: 'DOM Manipulation', prompt: 'Teach me how to use JavaScript to select an HTML element and change its text content or attributes.', completed: false },
                      { id: 'fe-2-2', title: 'Event Handling', prompt: 'Show me how to use JavaScript to listen for a button click and log a message to the console.', completed: false },
-                     { id: 'fe-2-3', title: 'Fetching Data', prompt: 'How can I fetch data from an API using JavaScript? Show a simple example using the `fetch` function.', completed: false },
+                     { id: 'fe-2-3', title: 'Fetching Data (APIs)', prompt: 'How can I fetch data from a remote API using the `fetch` function and Promises in JavaScript?', completed: false },
                 ],
             },
             {
                 title: 'Module 3: Introduction to React',
                 lessons: [
                     { id: 'fe-3-1', title: 'What is React?', prompt: 'Explain what React is and why it is used for building user interfaces. What is a component?', completed: false },
-                    { id: 'fe-3-2', title: 'JSX', prompt: 'What is JSX? Show me a simple example of a React component that renders an `<h1>` tag.', completed: false },
-                    { id: 'fe-3-3', title: 'State and Props', prompt: 'Explain the difference between `state` and `props` in React. Provide a simple example of a component with state using the `useState` hook.', completed: false },
+                    { id: 'fe-3-2', title: 'JSX and Props', prompt: 'What is JSX? Show me how to create a reusable component that accepts `props`.', completed: false },
+                    { id: 'fe-3-3', title: 'State & Events', prompt: 'Explain component state using the `useState` hook. Show how to update state when a button is clicked.', completed: false },
+                    { id: 'fe-3-4', title: 'Conditional Rendering', prompt: 'How do I show or hide components in React? Explain conditional rendering using the ternary operator or `&&`.', completed: false },
+                ],
+            },
+             {
+                title: 'Module 4: Intermediate React',
+                lessons: [
+                    { id: 'fe-4-1', title: 'Rendering Lists', prompt: 'How do I render a list of items from an array in React? Explain the use of `.map()` and the `key` prop.', completed: false },
+                    { id: 'fe-4-2', title: 'The useEffect Hook', prompt: 'What is the `useEffect` hook for? Explain its use for side effects, like fetching data when a component mounts.', completed: false },
+                    { id: 'fe-4-3', title: 'Handling Forms', prompt: 'Teach me the basics of handling forms in React, including controlled components.', completed: false },
                 ],
             },
             {
                 title: 'Project: Interactive Portfolio Card',
                 project: {
                     id: 'proj-fe-card',
-                    title: 'Project: Interactive Portfolio Card',
-                    description: 'Build a small, interactive card component for a portfolio website.',
+                    title: 'Project: Simple Weather App',
+                    description: 'Build a weather app that fetches and displays data from a public API.',
                     steps: [
-                        { id: 'proj-fe-card-1', title: 'Step 1: HTML & CSS', prompt: 'Guide me to create the HTML structure and basic CSS for a portfolio card, including an image, name, title, and a "Contact" button.', completed: false },
-                        { id: 'proj-fe-card-2', title: 'Step 2: Add JavaScript', prompt: 'Help me write JavaScript so that when the "Contact" button is clicked, an alert pops up with an email address.', completed: false },
-                        { id: 'proj-fe-card-3', title: 'Step 3: Convert to React', prompt: 'Let\'s rebuild this card as a React component. Guide me in creating a `PortfolioCard.js` file and converting the HTML to JSX.', completed: false },
-                        { id: 'proj-fe-card-4', title: 'Step 4: Add State', prompt: 'Teach me how to use the `useState` hook in our React component to show or hide the email address below the card when the button is clicked, instead of using an alert.', completed: false },
+                        { id: 'proj-fe-card-1', title: 'Step 1: Basic React Setup', prompt: 'Guide me to set up a basic React component for a weather app. It should have an input for a city name and a button.', completed: false },
+                        { id: 'proj-fe-card-2', title: 'Step 2: State Management', prompt: 'Help me add state to store the city input and the fetched weather data.', completed: false },
+                        { id: 'proj-fe-card-3', title: 'Step 3: Fetching API Data', prompt: 'Let\'s use the OpenWeatherMap API (or a similar free weather API). Teach me how to fetch data for the entered city when the button is clicked.', completed: false },
+                        { id: 'proj-fe-card-4', title: 'Step 4: Displaying Weather', prompt: 'Guide me to conditionally render the weather data (temperature, description) after it has been fetched. Also, handle loading and error states.', completed: false },
                     ]
                 }
             }
@@ -305,11 +361,11 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
             {
-                title: 'Module 2: Backend Development',
+                title: 'Module 2: Backend with Node.js & Express',
                 lessons: [
-                    { id: 'fs-2-1', title: 'Backend Languages', prompt: 'What are some popular languages for backend development? Briefly mention Node.js (JavaScript), Python (Django/Flask), and Go.', completed: false },
-                    { id: 'fs-2-2', title: 'What is a Server?', prompt: 'Explain what a web server is. Let\'s use Node.js and Express as an example. Show me the minimal code for a "Hello World" server.', completed: false },
-                    { id: 'fs-2-3', title: 'REST APIs', prompt: 'What is a REST API? Explain the concepts of resources and HTTP verbs (GET, POST, PUT, DELETE).', completed: false },
+                    { id: 'fs-2-1', title: 'Intro to Node.js', prompt: 'What is Node.js and why is it used for backend development? Explain its event-driven, non-blocking nature.', completed: false },
+                    { id: 'fs-2-2', title: 'Building a Server with Express', prompt: 'Explain what Express.js is. Show me the minimal code for a "Hello World" server.', completed: false },
+                    { id: 'fs-2-3', title: 'REST APIs & Routing', prompt: 'What is a REST API? Explain resources, HTTP verbs (GET, POST), and how to set up basic routes in Express.', completed: false },
                 ],
             },
              {
@@ -317,20 +373,28 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'fs-3-1', title: 'What is a Database?', prompt: 'Explain the role of a database in a web application. Why not just store data in files?', completed: false },
                     { id: 'fs-3-2', title: 'SQL vs NoSQL', prompt: 'What is the main difference between SQL (like PostgreSQL) and NoSQL (like MongoDB) databases? Use an analogy.', completed: false },
-                    { id: 'fs-3-3', title: 'Database Schemas', prompt: 'What is a database schema? Show a simple example of a schema for a `users` table with id, username, and email.', completed: false },
+                    { id: 'fs-3-3', title: 'Connecting to a DB', prompt: 'Conceptually, how does a backend server connect to and query a database? Explain the role of a database driver or an ORM/ODM.', completed: false },
+                ],
+            },
+             {
+                title: 'Module 4: Connecting Frontend & Backend',
+                lessons: [
+                    { id: 'fs-4-1', title: 'CORS', prompt: 'What is Cross-Origin Resource Sharing (CORS) and why is it a common issue in full-stack development? How do you fix it on an Express server?', completed: false },
+                    { id: 'fs-4-2', title: 'Fetching from React', prompt: 'Show me how to make a `fetch` request from a React frontend to a local Express backend API.', completed: false },
+                    { id: 'fs-4-3', title: 'Authentication Concepts', prompt: 'Explain the basic concept of authentication. What is the difference between stateful (sessions) and stateless (JWT) authentication?', completed: false },
                 ],
             },
             {
                 title: 'Project: Simple API with Node.js',
                 project: {
                     id: 'proj-fs-api',
-                    title: 'Project: Simple API with Node.js',
-                    description: 'Build a basic REST API that can serve a list of users.',
+                    title: 'Project: Full-Stack To-Do List',
+                    description: 'Build a full-stack To-Do list with a React frontend and a Node.js/Express backend.',
                     steps: [
-                        { id: 'proj-fs-api-1', title: 'Step 1: Setup Express', prompt: 'Guide me to set up a new Node.js project and install Express.js. Create a basic server that listens on a port.', completed: false },
-                        { id: 'proj-fs-api-2', title: 'Step 2: In-Memory Data', prompt: 'Let\'s create a simple array of user objects in our code to act as our temporary database.', completed: false },
-                        { id: 'proj-fs-api-3', title: 'Step 3: GET Endpoint', prompt: 'Teach me how to create a GET endpoint at `/api/users` that returns the array of users as JSON.', completed: false },
-                        { id: 'proj-fs-api-4', title: 'Step 4: POST Endpoint', prompt: 'Now, guide me to create a POST endpoint at `/api/users` that allows adding a new user to our array from the request body.', completed: false },
+                        { id: 'proj-fs-api-1', title: 'Step 1: Setup Express API', prompt: 'Guide me to set up a new Node.js project and install Express.js. Create a basic server that listens on a port and has CORS enabled.', completed: false },
+                        { id: 'proj-fs-api-2', title: 'Step 2: To-Do API Endpoints', prompt: 'Let\'s create an in-memory array for todos. Guide me to create two API endpoints: `GET /api/todos` to get all todos, and `POST /api/todos` to add a new one.', completed: false },
+                        { id: 'proj-fs-api-3', title: 'Step 3: Setup React Frontend', prompt: 'Now, let\'s create a basic React app. It should have an input field to add a todo and a list to display them.', completed: false },
+                        { id: 'proj-fs-api-4', title: 'Step 4: Connect React to API', prompt: 'Teach me how to use `useEffect` to fetch the list of todos from our backend when the component loads, and how to POST a new todo when the user submits the form.', completed: false },
                     ]
                 }
             }
@@ -345,23 +409,30 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'mob-1-1', title: 'Native vs. Cross-Platform', prompt: 'Explain the difference between native mobile development (Swift/Kotlin) and cross-platform development (React Native/Flutter). What are the pros and cons?', completed: false },
                     { id: 'mob-1-2', title: 'UI/UX for Mobile', prompt: 'What are some key UI/UX design principles to keep in mind when building for small screens? Mention touch targets and navigation.', completed: false },
-                    { id: 'mob-1-3', title: 'Setting up your Environment', prompt: 'What tools do I need to start mobile development? Explain Expo for React Native as an easy starting point.', completed: false },
+                    { id: 'mob-1-3', title: 'Setting up with Expo', prompt: 'What tools do I need to start mobile development? Explain Expo for React Native as an easy starting point.', completed: false },
                 ],
             },
             {
-                title: 'Module 2: Building a UI',
+                title: 'Module 2: Building a UI with React Native',
                 lessons: [
-                    { id: 'mob-2-1', title: 'Components', prompt: 'Explain the concept of components in mobile development (e.g., in React Native). What are `View`, `Text`, and `Button`?', completed: false },
-                    { id: 'mob-2-2', title: 'Styling', prompt: 'How do you style components in a framework like React Native? Show me a simple example of a styled `View` and `Text`.', completed: false },
-                    { id: 'mob-2-3', title: 'Layout with Flexbox', prompt: 'Explain how Flexbox is used for layout in modern mobile development to create responsive UIs.', completed: false },
+                    { id: 'mob-2-1', title: 'Core Components', prompt: 'Explain the basic components in React Native. What are `View`, `Text`, `Button`, and `StyleSheet`?', completed: false },
+                    { id: 'mob-2-2', title: 'Layout with Flexbox', prompt: 'Explain how Flexbox is used for layout in React Native to create responsive UIs. Show me how to center an item.', completed: false },
+                    { id: 'mob-2-3', title: 'Handling User Input', prompt: 'Show me how to use a `TextInput` component to get input from a user and an `TouchableOpacity` for custom buttons.', completed: false },
                 ],
             },
             {
                 title: 'Module 3: State & Navigation',
                 lessons: [
                     { id: 'mob-3-1', title: 'State Management', prompt: 'What is state in a mobile app? Using React Native as an example, explain the `useState` hook.', completed: false },
-                    { id: 'mob-3-2', title: 'Handling User Input', prompt: 'Show me how to use a `TextInput` component to get input from a user and store it in state.', completed: false },
-                    { id: 'mob-3-3', title: 'Navigation', prompt: 'How do users move between different screens in a mobile app? Briefly explain the concept of a Stack Navigator.', completed: false },
+                    { id: 'mob-3-2', title: 'Lists of Data', prompt: 'How do I render a list of items? Introduce the `FlatList` component for displaying scrollable lists efficiently.', completed: false },
+                    { id: 'mob-3-3', title: 'Navigation', prompt: 'How do users move between different screens in a mobile app? Briefly explain React Navigation and the concept of a Stack Navigator.', completed: false },
+                ],
+            },
+             {
+                title: 'Module 4: Working with Data',
+                lessons: [
+                    { id: 'mob-4-1', title: 'Fetching API Data', prompt: 'How do I fetch data from a remote server in a React Native app? Show an example using `fetch` and `useEffect`.', completed: false },
+                    { id: 'mob-4-2', title: 'Device Storage', prompt: 'How can I save data permanently on the user\'s device? Explain the basics of using `AsyncStorage`.', completed: false },
                 ],
             },
             {
@@ -373,8 +444,9 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     steps: [
                         { id: 'proj-mob-tip-1', title: 'Step 1: The UI Layout', prompt: 'Guide me to create the UI for a tip calculator in React Native. I need a `TextInput` for the bill amount and `Text` components to display the tip and total.', completed: false },
                         { id: 'proj-mob-tip-2', title: 'Step 2: State Management', prompt: 'Help me set up state using `useState` to store the bill amount entered by the user.', completed: false },
-                        { id: 'proj-mob-tip-3', title: 'Step 3: Calculation Logic', prompt: 'Teach me how to calculate a 15% tip and the total bill whenever the input amount changes.', completed: false },
+                        { id: 'proj-mob-tip-3', title: 'Step 3: Calculation Logic', prompt: 'Teach me how to calculate a 15% tip and the total bill whenever the input amount changes. Handle cases where the input is not a valid number.', completed: false },
                         { id: 'proj-mob-tip-4', title: 'Step 4: Displaying the Result', prompt: 'How do I display the calculated tip and total in the `Text` components? Make sure they are formatted as currency.', completed: false },
+                        { id: 'proj-mob-tip-5', title: 'Step 5: Add Tip Buttons', prompt: 'Let\'s add buttons (e.g., 10%, 15%, 20%) to let the user select a tip percentage quickly. Update the calculation logic to use the selected percentage.', completed: false },
                     ]
                 }
             }
