@@ -65,7 +65,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // Fix: The getInitialState function was called without the required 'pathId' argument, leading to an error. Provided 'js-basics' as a default argument to correctly initialize the application state.
+  // FIX: The getInitialState function was called without the required 'pathId' argument. Provided 'js-basics' as a default argument to correctly initialize the application state.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -283,7 +283,7 @@ const App: React.FC = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const createChatInstance = useCallback((history: ChatMessage[] = []) => {
+  const createChatInstance = useCallback((history: ChatMessage[] = [], currentCustomDocs: string[] = []) => {
      if (!ai) return null;
      const languageMap: { [key: string]: string } = {
         'en': 'English',
@@ -296,18 +296,24 @@ const App: React.FC = () => {
         role,
         parts: parts.map(p => ({ text: p.text })), // Ensure parts are in the correct format
      }));
-
-     return ai.chats.create({
-      model: 'gemini-2.5-flash',
-      history: sanitizedHistory,
-      config: {
-        systemInstruction: `You are an expert AI programming mentor. 
+     
+     let systemInstruction = `You are an expert AI programming mentor. 
         Your goal is to guide users through learning to code by building real projects. 
         Explain concepts clearly, provide step-by-step instructions, analyze code, and give constructive feedback. 
         Keep your explanations concise, friendly, and focused. 
         Use markdown for formatting, especially for code blocks (e.g., \`\`\`javascript).
         When a user starts a lesson, project step, or a new custom project, greet them and begin the process immediately.
-        IMPORTANT: You MUST respond in ${responseLanguage}.`,
+        IMPORTANT: You MUST respond in ${responseLanguage}.`;
+        
+     if (currentCustomDocs && currentCustomDocs.length > 0) {
+        systemInstruction += `\n\nAdditionally, when providing information or code examples, you should prioritize and heavily reference the following documentation sources provided by the user:\n${currentCustomDocs.map(doc => `- ${doc}`).join('\n')}`;
+     }
+
+     return ai.chats.create({
+      model: 'gemini-2.5-flash',
+      history: sanitizedHistory,
+      config: {
+        systemInstruction,
         tools: [{googleSearch: {}}],
       },
     });
@@ -330,12 +336,12 @@ const App: React.FC = () => {
       }
 
       // Create a new chat instance, seeding it with the sanitized, persisted history.
-      const newSession = createChatInstance(history); 
+      const newSession = createChatInstance(history, customDocs); 
       if (newSession) {
         chatSessionRef.current = { contextId: contextId, session: newSession };
       }
       return newSession;
-  }, [ai, createChatInstance, activeView, learningPathHistories, customProjects]);
+  }, [ai, createChatInstance, activeView, learningPathHistories, customProjects, customDocs]);
 
 
   const showNotification = (achievement: Achievement) => {
