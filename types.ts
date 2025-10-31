@@ -3,7 +3,8 @@ import type { ElementType } from 'react';
 
 export interface GroundingChunk {
   web?: {
-    uri: string;
+    // FIX: made uri optional to match the type from @google/genai
+    uri?: string;
     title: string;
   };
 }
