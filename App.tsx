@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority } from './types';
@@ -62,12 +59,13 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [chatError, setChatError] = useState<string | null>(null);
   
   // View mode state
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMobileView, setActiveMobileView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: The getInitialState function requires a `pathId` argument. It was called without one, causing a "Expected 1 arguments, but got 0" error. Passing 'js-basics' as a default ensures correct initialization.
+  // FIX: The getInitialState function was called without the required 'pathId' argument, leading to an error. Provided 'js-basics' as a default argument to correctly initialize the application state.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -285,7 +283,7 @@ const App: React.FC = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const createChatInstance = useCallback(() => {
+  const createChatInstance = useCallback((history: ChatMessage[] = []) => {
      if (!ai) return null;
      const languageMap: { [key: string]: string } = {
         'en': 'English',
@@ -293,8 +291,15 @@ const App: React.FC = () => {
      };
      const responseLanguage = languageMap[aiLanguage] || 'English';
 
+     // Sanitize history to remove properties not expected by the API, like 'groundingChunks'
+     const sanitizedHistory = history.map(({ role, parts }) => ({
+        role,
+        parts: parts.map(p => ({ text: p.text })), // Ensure parts are in the correct format
+     }));
+
      return ai.chats.create({
       model: 'gemini-2.5-flash',
+      history: sanitizedHistory,
       config: {
         systemInstruction: `You are an expert AI programming mentor. 
         Your goal is to guide users through learning to code by building real projects. 
@@ -310,16 +315,27 @@ const App: React.FC = () => {
 
   const getChatSession = useCallback((contextId: string): Chat | null => {
       if (!ai) return null;
+      // If a session for the current context already exists, return it.
       if (chatSessionRef.current && chatSessionRef.current.contextId === contextId) {
           return chatSessionRef.current.session;
       }
       
-      const newSession = createChatInstance();
+      // Otherwise, create a new session. First, retrieve the persisted history for this context.
+      let history: ChatMessage[] = [];
+      if (activeView === 'learningPath') {
+          history = learningPathHistories[contextId] || [];
+      } else if (activeView === 'customProject') {
+          const project = customProjects.find(p => p.id === contextId);
+          history = project ? project.chatHistory : [];
+      }
+
+      // Create a new chat instance, seeding it with the sanitized, persisted history.
+      const newSession = createChatInstance(history); 
       if (newSession) {
         chatSessionRef.current = { contextId: contextId, session: newSession };
       }
       return newSession;
-  }, [ai, createChatInstance]);
+  }, [ai, createChatInstance, activeView, learningPathHistories, customProjects]);
 
 
   const showNotification = (achievement: Achievement) => {
@@ -397,17 +413,20 @@ const App: React.FC = () => {
       targetView?: 'learningPath' | 'customProject'; 
     } = {}
   ) => {
+    setChatError(null);
     const viewContext = targetView || activeView;
     const idContext = targetId || (viewContext === 'learningPath' ? activeLessonId : activeCustomProjectId);
 
     if (!idContext) {
       console.error("handleSendMessage called without a valid context ID.");
+      setChatError(t('chat.sendError'));
       return;
     }
     
     const chat = getChatSession(idContext);
     if (!chat) {
         console.error("Could not get a chat session.");
+        setChatError(t('chat.sendError'));
         return;
     }
 
@@ -470,8 +489,9 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage: ChatMessage = { role: 'model', parts: [{ text: t('chat.errorMessage') }] };
-      setMessages([...initialMessagesForUI, errorMessage]);
+      setChatError(t('chat.sendError'));
+      // Revert to the state before sending the message on error
+      setMessages(initialMessagesForUI);
     } finally {
       setIsLoading(false);
       
@@ -510,7 +530,7 @@ const App: React.FC = () => {
         setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: cleanFinalMessages } : p));
       }
     }
-  }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession, chatHistory]);
+  }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
@@ -860,6 +880,8 @@ const App: React.FC = () => {
                 onRedo={handleRedo}
                 canUndo={canUndo}
                 canRedo={canRedo}
+                error={chatError}
+                onClearError={() => setChatError(null)}
               />
             </div>
             <div className={`flex flex-col min-h-0 ${activeMobileView === 'tools' ? 'flex' : 'hidden'} md:flex`}>

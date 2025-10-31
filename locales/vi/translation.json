@@ -39,7 +39,8 @@
     "copyMarkdown": "Sao chép Markdown",
     "copied": "Đã sao chép",
     "sources": "Nguồn",
-    "errorMessage": "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.",
+    "sendError": "Không thể gửi tin nhắn. AI có thể đang bận hoặc có sự cố mạng. Vui lòng thử lại sau giây lát.",
+    "errorTitle": "Lỗi",
     "clearHistory": "Xóa lịch sử trò chuyện",
     "undo": "Hoàn tác",
     "redo": "Làm lại"

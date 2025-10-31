@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon } from './icons';
@@ -17,6 +19,8 @@ interface ChatInterfaceProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  error: string | null;
+  onClearError: () => void;
 }
 
 const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; copied: boolean; }> = ({ language, code, onCopy, copied }) => {
@@ -222,7 +226,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
 };
 
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory, onUndo, onRedo, canUndo, canRedo }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory, onUndo, onRedo, canUndo, canRedo, error, onClearError }) => {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -492,6 +496,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        {error && (
+          <div className="mb-2 p-2 bg-red-100 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-lg text-sm flex items-center justify-between">
+            <p><span className="font-bold">{t('chat.errorTitle')}:</span> {error}</p>
+            <button onClick={onClearError} className="p-1 rounded-full hover:bg-red-200 dark:hover:bg-red-800">
+              <XIcon className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"

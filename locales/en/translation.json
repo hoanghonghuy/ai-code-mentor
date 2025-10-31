@@ -39,7 +39,8 @@
     "copyMarkdown": "Copy Markdown",
     "copied": "Copied",
     "sources": "Sources",
-    "errorMessage": "Sorry, I encountered an error. Please try again.",
+    "sendError": "Failed to send message. The AI may be busy or there could be a network issue. Please try again shortly.",
+    "errorTitle": "Error",
     "clearHistory": "Clear chat history",
     "undo": "Undo",
     "redo": "Redo"
