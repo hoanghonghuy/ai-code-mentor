@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -284,7 +285,20 @@ const App: React.FC = () => {
     setCustomDocs(prev => prev.filter((_, index) => index !== indexToRemove));
   }, []);
 
-  const handleSendMessage = useCallback(async (message: string, { isSystemMessage = false, initialHistory }: { isSystemMessage?: boolean; initialHistory?: ChatMessage[] } = {}) => {
+  const handleSendMessage = useCallback(async (
+    message: string,
+    { 
+      isSystemMessage = false, 
+      initialHistory, 
+      targetId, 
+      targetView 
+    }: { 
+      isSystemMessage?: boolean; 
+      initialHistory?: ChatMessage[]; 
+      targetId?: string; 
+      targetView?: 'learningPath' | 'customProject'; 
+    } = {}
+  ) => {
     const currentChatInstance = createChatInstance();
     if (!currentChatInstance) return;
 
@@ -337,11 +351,17 @@ const App: React.FC = () => {
       setMessages(finalMessages);
     } finally {
       setIsLoading(false);
+      
+      const viewToSave = targetView || activeView;
+      const idToSave = targetId || (viewToSave === 'learningPath' ? activeLessonId : activeCustomProjectId);
+      
+      if (!idToSave) return;
+
       // Persist the final state of messages
-      if (activeView === 'learningPath' && activeLessonId) {
-        setLearningPathHistories(prev => ({ ...prev, [activeLessonId]: finalMessages }));
-      } else if (activeView === 'customProject' && activeCustomProjectId) {
-        setCustomProjects(prev => prev.map(p => p.id === activeCustomProjectId ? { ...p, chatHistory: finalMessages } : p));
+      if (viewToSave === 'learningPath') {
+        setLearningPathHistories(prev => ({ ...prev, [idToSave]: finalMessages }));
+      } else if (viewToSave === 'customProject') {
+        setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: finalMessages } : p));
       }
     }
   }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId]);
@@ -357,7 +377,12 @@ const App: React.FC = () => {
     const history = learningPathHistories[item.id] || [];
     
     if (history.length === 0) {
-        handleSendMessage(item.prompt, { isSystemMessage: true, initialHistory: [] });
+        handleSendMessage(item.prompt, { 
+          isSystemMessage: true, 
+          initialHistory: [],
+          targetId: item.id,
+          targetView: 'learningPath'
+        });
     }
     
     setLearningPath(currentPath => {
@@ -429,7 +454,12 @@ const App: React.FC = () => {
     
     First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
     
-    handleSendMessage(kickstartPrompt, { isSystemMessage: true, initialHistory: [] });
+    handleSendMessage(kickstartPrompt, { 
+      isSystemMessage: true, 
+      initialHistory: [],
+      targetId: newProject.id,
+      targetView: 'customProject'
+    });
   }, [handleSendMessage]);
 
   const handleSelectCustomProject = useCallback((projectId: string) => {
