@@ -1,7 +1,8 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon } from './icons';
+import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon } from './icons';
 import { useTranslation } from 'react-i18next';
 
 // Add hljs to the window object for TypeScript
@@ -12,6 +13,10 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
   onClearHistory: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; copied: boolean; }> = ({ language, code, onCopy, copied }) => {
@@ -167,7 +172,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
           listItems.push(<li key={`${blockIndex}-${i}`}>{parseInline(lines[i].replace(/^\d+\.\s/, ''))}</li>);
           i++;
         }
-        elements.push(<ol key={`${blockIndex}-${i}-ol`} className="list-decimal pl-5 my-2 space-y-1">{listItems}</ol>);
+        elements.push(<ol key={`${blockIndex}-${i}-ol`} className="list-decimal pl-5 my-2 space-y-1">{listItems}</ul>);
         continue;
       }
 
@@ -217,7 +222,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
 };
 
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory, onUndo, onRedo, canUndo, canRedo }) => {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -329,6 +334,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold">{t('chat.title')}</h2>
         <div className="flex items-center gap-2">
+           <button
+            onClick={onUndo}
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t('chat.undo')}
+            disabled={!canUndo || isLoading}
+            title={t('chat.undo')}
+          >
+              <UndoIcon className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onRedo}
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t('chat.redo')}
+            disabled={!canRedo || isLoading}
+            title={t('chat.redo')}
+          >
+              <RedoIcon className="w-5 h-5" />
+          </button>
           <button
             onClick={onClearHistory}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"

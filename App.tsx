@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority } from './types';
@@ -66,7 +67,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMobileView, setActiveMobileView] = useState<'chat' | 'tools'>('chat');
 
-  // Fix: The getInitialState function requires a `pathId` argument. It was called without one, causing a "Expected 1 arguments, but got 0" error. Passing 'js-basics' as a default ensures correct initialization.
+  // FIX: The getInitialState function requires a `pathId` argument. It was called without one, causing a "Expected 1 arguments, but got 0" error. Passing 'js-basics' as a default ensures correct initialization.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -83,6 +84,8 @@ const App: React.FC = () => {
   const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
   const [historyToClear, setHistoryToClear] = useState<{ view: 'learningPath' | 'customProject', id: string } | null>(null);
 
+  // Undo/Redo state - session only, not persisted
+  const [chatHistory, setChatHistory] = useState<{ [key: string]: { past: ChatMessage[][], future: ChatMessage[][] } }>({});
 
   // Gamification State
   const [points, setPoints] = useState(initialState.points);
@@ -154,6 +157,7 @@ const App: React.FC = () => {
       setAiLanguage(freshState.aiLanguage);
       setMessages([]);
       setActiveView('learningPath');
+      setChatHistory({});
   }, []);
 
     useEffect(() => {
@@ -410,6 +414,20 @@ const App: React.FC = () => {
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
     
     const baseHistory = initialHistory ?? (messagesRef.current || []);
+
+    if (!isSystemMessage) {
+        setChatHistory(prev => {
+            const contextHistory = prev[idContext] || { past: [], future: [] };
+            return {
+                ...prev,
+                [idContext]: {
+                    past: [...contextHistory.past, baseHistory],
+                    future: [] // Any new message clears the redo history
+                }
+            };
+        });
+    }
+
     const initialMessagesForUI = isSystemMessage ? baseHistory : [...baseHistory, userMessage];
     
     setMessages(initialMessagesForUI);
@@ -492,7 +510,7 @@ const App: React.FC = () => {
         setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: cleanFinalMessages } : p));
       }
     }
-  }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession]);
+  }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession, chatHistory]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
@@ -560,6 +578,7 @@ const App: React.FC = () => {
         setBookmarkedLessonIds([]);
         setActiveView('learningPath');
         setMessages([]);
+        setChatHistory({});
     } else {
         resetStateForGuest(pathId);
     }
@@ -631,6 +650,13 @@ const App: React.FC = () => {
     const { view, id } = historyToClear;
     chatSessionRef.current = null; // Force recreation of chat session
 
+    // Clear the undo/redo history for this context
+    setChatHistory(prev => {
+        const newHistoryState = { ...prev };
+        delete newHistoryState[id];
+        return newHistoryState;
+    });
+
     if (view === 'learningPath') {
         setLearningPathHistories(prev => {
             const newHistories = { ...prev };
@@ -672,6 +698,55 @@ const App: React.FC = () => {
     setHistoryToClear(null);
   }, [historyToClear, learningPath, customProjects, handleSendMessage]);
 
+  const handleUndo = useCallback(() => {
+    const contextId = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId;
+    if (!contextId) return;
+
+    const contextHistory = chatHistory[contextId];
+    if (!contextHistory || contextHistory.past.length === 0) return;
+
+    const newPast = contextHistory.past.slice(0, -1);
+    const stateToRestore = contextHistory.past[contextHistory.past.length - 1];
+
+    const currentState = messagesRef.current || [];
+    const newFuture = [currentState, ...(contextHistory.future || [])];
+
+    setMessages(stateToRestore); // Update UI immediately
+
+    if (activeView === 'learningPath') {
+        setLearningPathHistories(prev => ({ ...prev, [contextId]: stateToRestore }));
+    } else {
+        setCustomProjects(prev => prev.map(p => p.id === contextId ? { ...p, chatHistory: stateToRestore } : p));
+    }
+    
+    setChatHistory(prev => ({ ...prev, [contextId]: { past: newPast, future: newFuture } }));
+  }, [activeView, activeLessonId, activeCustomProjectId, chatHistory]);
+
+  const handleRedo = useCallback(() => {
+      const contextId = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId;
+      if (!contextId) return;
+
+      const contextHistory = chatHistory[contextId];
+      if (!contextHistory || contextHistory.future.length === 0) return;
+
+      const stateToRestore = contextHistory.future[0];
+      const newFuture = contextHistory.future.slice(1);
+
+      const currentState = messagesRef.current || [];
+      const newPast = [...(contextHistory.past || []), currentState];
+
+      setMessages(stateToRestore); // Update UI immediately
+
+      if (activeView === 'learningPath') {
+          setLearningPathHistories(prev => ({ ...prev, [contextId]: stateToRestore }));
+      } else {
+          setCustomProjects(prev => prev.map(p => p.id === contextId ? { ...p, chatHistory: stateToRestore } : p));
+      }
+
+      setChatHistory(prev => ({ ...prev, [contextId]: { past: newPast, future: newFuture } }));
+  }, [activeView, activeLessonId, activeCustomProjectId, chatHistory]);
+
+
   const activeLesson = useMemo(() => {
     if (!activeLessonId) return null;
     return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
@@ -699,6 +774,11 @@ const App: React.FC = () => {
       </div>
     );
   }
+
+  const currentContextId = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId;
+  const canUndo = !!(currentContextId && chatHistory[currentContextId]?.past.length > 0);
+  const canRedo = !!(currentContextId && chatHistory[currentContextId]?.future.length > 0);
+
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -776,6 +856,10 @@ const App: React.FC = () => {
                 onSendMessage={handleSendMessage} 
                 isLoading={isLoading} 
                 onClearHistory={handleInitiateClearHistory}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={canUndo}
+                canRedo={canRedo}
               />
             </div>
             <div className={`flex flex-col min-h-0 ${activeMobileView === 'tools' ? 'flex' : 'hidden'} md:flex`}>

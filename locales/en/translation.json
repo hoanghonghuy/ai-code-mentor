@@ -40,7 +40,9 @@
     "copied": "Copied",
     "sources": "Sources",
     "errorMessage": "Sorry, I encountered an error. Please try again.",
-    "clearHistory": "Clear chat history"
+    "clearHistory": "Clear chat history",
+    "undo": "Undo",
+    "redo": "Redo"
   },
   "playground": {
     "title": "Code Playground",

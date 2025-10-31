@@ -40,7 +40,9 @@
     "copied": "Đã sao chép",
     "sources": "Nguồn",
     "errorMessage": "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.",
-    "clearHistory": "Xóa lịch sử trò chuyện"
+    "clearHistory": "Xóa lịch sử trò chuyện",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại"
   },
   "playground": {
     "title": "Sân chơi mã",
