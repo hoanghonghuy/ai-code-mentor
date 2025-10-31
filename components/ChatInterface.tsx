@@ -2,11 +2,50 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon } from './icons';
 
+// Add hljs to the window object for TypeScript
+declare const hljs: any;
+
 interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   isLoading: boolean;
 }
+
+const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; copied: boolean; }> = ({ language, code, onCopy, copied }) => {
+    const codeRef = useRef<HTMLElement>(null);
+    const lang = language || 'plaintext';
+
+    useEffect(() => {
+        if (codeRef.current) {
+            hljs.highlightElement(codeRef.current);
+        }
+    }, [code, lang]);
+
+    return (
+        <div className="relative group my-2 bg-[#282c34] rounded-md overflow-hidden text-sm">
+            <div className="flex items-center justify-between bg-gray-900/50 px-3 py-1.5 border-b border-gray-700/50">
+                <span className="text-xs font-sans text-gray-400">{lang}</span>
+                <button
+                    onClick={onCopy}
+                    className="p-1 rounded-md text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
+                    aria-label="Copy code"
+                >
+                    {copied ? (
+                        <CheckIcon className="w-4 h-4 text-green-400" />
+                    ) : (
+                        <CopyIcon className="w-4 h-4" />
+                    )}
+                </button>
+            </div>
+            <pre className="m-0">
+                <code ref={codeRef} className={`language-${lang}`}>
+                    {code}
+                </code>
+            </pre>
+        </div>
+    );
+};
+
 
 const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
   const [copiedBlockIndex, setCopiedBlockIndex] = useState<number | null>(null);
@@ -66,25 +105,13 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
           const lang = langMatch ? langMatch[1] : '';
           const code = block.replace(/^```(?:\w+)?\n?/, '').replace(/```$/, '').trim();
           return (
-             <div key={index} className="relative group my-2">
-                <div className="flex items-center justify-between bg-gray-300/50 dark:bg-gray-800 px-3 py-1.5 rounded-t-md border-b border-gray-300 dark:border-gray-700">
-                    <span className="text-xs font-sans text-gray-500">{lang}</span>
-                    <button
-                        onClick={() => handleCopyCode(code, index)}
-                        className="p-1 rounded-md text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                        aria-label="Copy code"
-                    >
-                        {copiedBlockIndex === index ? (
-                            <CheckIcon className="w-4 h-4 text-green-500" />
-                        ) : (
-                            <CopyIcon className="w-4 h-4" />
-                        )}
-                    </button>
-                </div>
-                <pre className="bg-gray-200/50 dark:bg-gray-800/50 p-3 mt-0 rounded-b-md overflow-x-auto">
-                    <code className="font-mono text-sm">{code}</code>
-                </pre>
-            </div>
+             <CodeBlock
+                key={index}
+                language={lang}
+                code={code}
+                copied={copiedBlockIndex === index}
+                onCopy={() => handleCopyCode(code, index)}
+            />
           );
         }
 
