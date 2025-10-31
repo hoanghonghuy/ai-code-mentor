@@ -37,7 +37,7 @@ const App: React.FC = () => {
   const [activePathId, setActivePathId] = useState<LearningPathId>('js-basics');
   const [learningPath, setLearningPath] = useState<LearningPath>(learningPaths[activePathId]);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
-  const [learningPathMessages, setLearningPathMessages] = useState<ChatMessage[]>([]);
+  const [learningPathHistories, setLearningPathHistories] = useState<{ [key: string]: ChatMessage[] }>({});
 
   // Custom Project State
   const [customProjects, setCustomProjects] = useState<CustomProject[]>([]);
@@ -74,14 +74,14 @@ const App: React.FC = () => {
   // Effect to switch message history based on active view
   useEffect(() => {
       if (activeView === 'learningPath') {
-          setMessages(learningPathMessages);
+          setMessages(learningPathHistories[activeLessonId || ''] || []);
       } else if (activeView === 'customProject' && activeCustomProjectId) {
           const activeProject = customProjects.find(p => p.id === activeCustomProjectId);
           setMessages(activeProject ? activeProject.chatHistory : []);
       } else {
           setMessages([]);
       }
-  }, [activeView, activeCustomProjectId, learningPathMessages, customProjects]);
+  }, [activeView, activeLessonId, activeCustomProjectId, learningPathHistories, customProjects]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -145,21 +145,21 @@ const App: React.FC = () => {
     setCustomDocs(prev => prev.filter((_, index) => index !== indexToRemove));
   }, []);
 
-  const handleSendMessage = useCallback(async (message: string, isSystemMessage = false) => {
+  const handleSendMessage = useCallback(async (message: string, { isSystemMessage = false, initialHistory }: { isSystemMessage?: boolean; initialHistory?: ChatMessage[] } = {}) => {
     const currentChatInstance = createChatInstance();
     if (!currentChatInstance) return;
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
     
-    // Determine where to save the message
     let currentMessages: ChatMessage[] = [];
+    const baseHistory = initialHistory !== undefined ? initialHistory : messages;
+
     if (!isSystemMessage) {
-        currentMessages = [...messages, userMessage];
+        currentMessages = [...baseHistory, userMessage];
         setMessages(currentMessages);
     } else {
-        currentMessages = messages;
+        currentMessages = baseHistory;
     }
-
 
     setIsLoading(true);
 
@@ -196,13 +196,13 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
       // Persist the final state of messages
-      if (activeView === 'learningPath') {
-        setLearningPathMessages(currentMessages);
+      if (activeView === 'learningPath' && activeLessonId) {
+        setLearningPathHistories(prev => ({ ...prev, [activeLessonId]: currentMessages }));
       } else if (activeView === 'customProject' && activeCustomProjectId) {
         setCustomProjects(prev => prev.map(p => p.id === activeCustomProjectId ? { ...p, chatHistory: currentMessages } : p));
       }
     }
-  }, [messages, createChatInstance, activeView, activeCustomProjectId]);
+  }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
@@ -210,9 +210,14 @@ const App: React.FC = () => {
   
   const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
     setActiveView('learningPath');
-    setLearningPathMessages([]);
-    handleSendMessage(item.prompt, true);
     setActiveLessonId(item.id);
+
+    const history = learningPathHistories[item.id] || [];
+    setMessages(history);
+
+    if (history.length === 0) {
+        handleSendMessage(item.prompt, { isSystemMessage: true, initialHistory: [] });
+    }
     
     setLearningPath(currentPath => {
         let itemAlreadyCompleted = false;
@@ -245,7 +250,7 @@ const App: React.FC = () => {
     });
 
     if (window.innerWidth < 768) setSidebarOpen(false);
-  }, [handleSendMessage, unlockAchievement]);
+  }, [handleSendMessage, unlockAchievement, learningPathHistories]);
 
   const handleSelectPath = useCallback((pathId: LearningPathId) => {
     setActivePathId(pathId);
@@ -254,7 +259,7 @@ const App: React.FC = () => {
     setAchievements(getInitialAchievements(newPathData.title));
     setPoints(0);
     setActiveLessonId(null);
-    setLearningPathMessages([]);
+    setLearningPathHistories({});
     setActiveView('learningPath');
   }, []);
 
@@ -276,7 +281,7 @@ const App: React.FC = () => {
     
     First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
     
-    handleSendMessage(kickstartPrompt, true);
+    handleSendMessage(kickstartPrompt, { isSystemMessage: true, initialHistory: [] });
   }, [handleSendMessage]);
 
   const handleSelectCustomProject = useCallback((projectId: string) => {

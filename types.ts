@@ -1,4 +1,5 @@
 import { Chat } from "@google/genai";
+import type { ElementType } from 'react';
 
 export interface GroundingChunk {
   web?: {
@@ -53,7 +54,8 @@ export interface Achievement {
   name: string;
   description: string;
   unlocked: boolean;
-  icon: React.ElementType;
+  // Fix: Replaced React.ElementType with ElementType and added the corresponding import to resolve the 'Cannot find namespace React' error.
+  icon: ElementType;
 }
 
 export interface CustomProject {
