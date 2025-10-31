@@ -59,8 +59,8 @@ export interface Achievement {
   name: string;
   description: string;
   unlocked: boolean;
-  // Fix: Replaced React.ElementType with ElementType and added the corresponding import to resolve the 'Cannot find namespace React' error.
-  icon: ElementType;
+  // Fix: Replaced ElementType with string to make it serializable and prevent circular JSON errors.
+  icon: string;
 }
 
 export interface CustomProject {
@@ -90,5 +90,6 @@ export interface UserData {
   bookmarkedLessonIds: string[];
   customDocs: string[];
   activePathId: LearningPathId;
+  aiLanguage?: string;
   lastSaved?: any;
 }

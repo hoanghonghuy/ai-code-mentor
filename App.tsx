@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -8,19 +6,22 @@ import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
 import Notification from './components/Notification';
-import { TrophyIcon, NoteIcon, PlayIcon, CodeIcon } from './components/icons';
+import { NoteIcon, PlayIcon, CodeIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
 import NewProjectModal from './components/NewProjectModal';
 import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc, serverTimestamp } from './firebase';
+import { useTranslation, Trans } from 'react-i18next';
+
+const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
 
 const getInitialAchievements = (pathTitle: string): Achievement[] => {
     const definitions: Omit<Achievement, 'unlocked'>[] = [
-        { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: TrophyIcon },
-        { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: TrophyIcon },
-        { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: TrophyIcon },
-        { id: 'project-builder', name: 'Project Builder', description: 'Complete your first guided project.', icon: TrophyIcon },
-        { id: 'path-complete', name: `${pathTitle} Journeyman`, description: `Complete the entire ${pathTitle} path.`, icon: TrophyIcon },
+        { id: 'first-lesson', name: 'First Step', description: 'Complete your first lesson.', icon: 'TrophyIcon' },
+        { id: 'first-module', name: 'Module Master', description: 'Complete all lessons in a module.', icon: 'TrophyIcon' },
+        { id: 'bug-hunter', name: 'Bug Hunter', description: 'Run code for the first time.', icon: 'TrophyIcon' },
+        { id: 'project-builder', name: 'Project Builder', description: 'Complete your first guided project.', icon: 'TrophyIcon' },
+        { id: 'path-complete', name: `${pathTitle} Journeyman`, description: `Complete the entire ${pathTitle} path.`, icon: 'TrophyIcon' },
     ];
     return definitions.map(ach => ({ ...ach, unlocked: false }));
 };
@@ -41,10 +42,13 @@ const getInitialState = (pathId: LearningPathId = 'js-basics') => {
     notes: {},
     bookmarkedLessonIds: [],
     customDocs: ['https://react.dev', 'https://developer.mozilla.org/'],
+    aiLanguage: 'en',
   };
 };
 
 const App: React.FC = () => {
+  const { t, i18n } = useTranslation();
+
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -82,10 +86,12 @@ const App: React.FC = () => {
   const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>(initialState.bookmarkedLessonIds);
   const [customDocs, setCustomDocs] = useState<string[]>(initialState.customDocs);
   const [activeRightTab, setActiveRightTab] = useState<'playground' | 'notes'>('playground');
+  
+  // Settings State
+  const [aiLanguage, setAiLanguage] = useState(initialState.aiLanguage);
 
 
   const ai = useMemo(() => {
-    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
     if (process.env.API_KEY) {
       return new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
@@ -109,7 +115,6 @@ const App: React.FC = () => {
     }
   }, [theme]);
   
-  // Effect to synchronize the displayed messages with the active chat history source.
   useEffect(() => {
       if (activeView === 'learningPath') {
           setMessages(learningPathHistories[activeLessonId || ''] || []);
@@ -133,21 +138,21 @@ const App: React.FC = () => {
       setAchievements(freshState.achievements);
       setNotes(freshState.notes);
       setBookmarkedLessonIds(freshState.bookmarkedLessonIds);
+      setAiLanguage(freshState.aiLanguage);
       setMessages([]);
       setActiveView('learningPath');
   }, []);
 
-  // Auth listener
-  useEffect(() => {
+    useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
+            localStorage.removeItem(GUEST_DATA_KEY);
             setUser(currentUser);
             const userDocRef = doc(db, "users", currentUser.uid);
             const userDocSnap = await getDoc(userDocRef);
             
             if (userDocSnap.exists()) {
                 const data = userDocSnap.data() as UserData;
-                // Restore state from Firebase
                 setActivePathId(data.activePathId || 'js-basics');
                 setLearningPath(data.learningPath || getInitialLearningPath(data.activePathId || 'js-basics'));
                 setActiveLessonId(data.activeLessonId || null);
@@ -159,26 +164,49 @@ const App: React.FC = () => {
                 setNotes(data.notes || {});
                 setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
                 setCustomDocs(data.customDocs || ['https://react.dev', 'https://developer.mozilla.org/']);
+                setAiLanguage(data.aiLanguage || 'en');
+            } else {
+                resetStateForGuest();
             }
             hasLoadedData.current = true;
         } else {
             setUser(null);
             hasLoadedData.current = false;
-            resetStateForGuest();
+            const guestDataJson = localStorage.getItem(GUEST_DATA_KEY);
+            if(guestDataJson) {
+                try {
+                    const data = JSON.parse(guestDataJson) as UserData;
+                     setActivePathId(data.activePathId || 'js-basics');
+                     setLearningPath(data.learningPath || getInitialLearningPath(data.activePathId || 'js-basics'));
+                     setActiveLessonId(data.activeLessonId || null);
+                     setLearningPathHistories(data.learningPathHistories || {});
+                     setCustomProjects(data.customProjects || []);
+                     setActiveCustomProjectId(data.activeCustomProjectId || null);
+                     setPoints(data.points || 0);
+                     setAchievements(data.achievements?.length ? data.achievements : getInitialAchievements(data.learningPath.title));
+                     setNotes(data.notes || {});
+                     setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
+                     setCustomDocs(data.customDocs || ['https://react.dev', 'https://developer.mozilla.org/']);
+                     setAiLanguage(data.aiLanguage || 'en');
+                } catch (error) {
+                    console.error("Failed to parse guest data from localStorage", error);
+                    resetStateForGuest();
+                }
+            } else {
+                resetStateForGuest();
+            }
         }
         setAuthLoading(false);
     });
 
     return () => unsubscribe();
-  }, [resetStateForGuest]);
+    }, [resetStateForGuest]);
 
-  // Effect to save data to firestore on change
   useEffect(() => {
-    if (!user || !hasLoadedData.current || authLoading) {
-        return;
-    }
+    if (authLoading) return;
+    if (user && !hasLoadedData.current) return;
 
-    const currentState: UserData = {
+    const currentState: Omit<UserData, 'lastSaved'> = {
         activePathId,
         learningPath,
         activeLessonId,
@@ -190,29 +218,35 @@ const App: React.FC = () => {
         notes,
         bookmarkedLessonIds,
         customDocs,
-        lastSaved: serverTimestamp(),
+        aiLanguage,
     };
 
-    const saveData = async () => {
+    const saveData = () => {
         if (user) {
             try {
-                await setDoc(doc(db, "users", user.uid), currentState, { merge: true });
+                const dataToSave = { ...currentState, lastSaved: serverTimestamp() };
+                setDoc(doc(db, "users", user.uid), dataToSave, { merge: true });
             } catch (error) {
-                console.error("Error saving user data:", error);
+                console.error("Error saving user data to Firestore:", error);
+            }
+        } else {
+            try {
+                localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(currentState));
+            } catch (error) {
+                 console.error("Error saving guest data to localStorage:", error);
             }
         }
     };
 
-    const timer = setTimeout(saveData, 1500); // Debounce save
+    const timer = setTimeout(saveData, 1500);
     return () => clearTimeout(timer);
 
   }, [
     user, authLoading,
     activePathId, learningPath, activeLessonId, learningPathHistories,
     customProjects, activeCustomProjectId, points, achievements,
-    notes, bookmarkedLessonIds, customDocs
+    notes, bookmarkedLessonIds, customDocs, aiLanguage
   ]);
-
 
   const handleLogin = async () => {
       try {
@@ -236,6 +270,12 @@ const App: React.FC = () => {
 
   const createChatInstance = useCallback(() => {
      if (!ai) return null;
+     const languageMap: { [key: string]: string } = {
+        'en': 'English',
+        'vi': 'Vietnamese'
+     };
+     const responseLanguage = languageMap[aiLanguage] || 'English';
+
      return ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
@@ -244,11 +284,12 @@ const App: React.FC = () => {
         Explain concepts clearly, provide step-by-step instructions, analyze code, and give constructive feedback. 
         Keep your explanations concise, friendly, and focused. 
         Use markdown for formatting, especially for code blocks (e.g., \`\`\`javascript).
-        When a user starts a lesson, project step, or a new custom project, greet them and begin the process immediately.`,
+        When a user starts a lesson, project step, or a new custom project, greet them and begin the process immediately.
+        IMPORTANT: You MUST respond in ${responseLanguage}.`,
         tools: [{googleSearch: {}}],
       },
     });
-  }, [ai]);
+  }, [ai, aiLanguage]);
 
   useEffect(() => {
     setChat(createChatInstance());
@@ -328,7 +369,7 @@ const App: React.FC = () => {
     try {
       const result = await currentChatInstance.sendMessageStream({ message });
       let text = '';
-      let groundingChunks: GroundingChunk[] = [];
+      let sanitizedGroundingChunks: GroundingChunk[] = [];
       
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: '' }] };
       let updatedMessages = [...currentMessages, modelMessage];
@@ -336,8 +377,17 @@ const App: React.FC = () => {
       
       for await (const chunk of result) {
         text += chunk.text;
+        
+        // Sanitize grounding chunks immediately upon receiving them
         if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-            groundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
+            sanitizedGroundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks
+                .map(c => ({
+                    web: {
+                        uri: c.web?.uri,
+                        title: c.web?.title,
+                    }
+                }))
+                .filter(c => c.web && c.web.uri); // Filter out any empty/invalid chunks
         }
 
         const newUpdatedMessages = [...updatedMessages];
@@ -345,7 +395,8 @@ const App: React.FC = () => {
         newUpdatedMessages[newUpdatedMessages.length - 1] = { 
             ...lastMessage,
             parts: [{ text }],
-            groundingChunks: groundingChunks.length > 0 ? groundingChunks : undefined,
+            // Use the sanitized data for the state update
+            groundingChunks: sanitizedGroundingChunks.length > 0 ? sanitizedGroundingChunks : undefined,
           };
         setMessages(newUpdatedMessages);
         updatedMessages = newUpdatedMessages;
@@ -353,7 +404,7 @@ const App: React.FC = () => {
       finalMessages = updatedMessages;
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage: ChatMessage = { role: 'model', parts: [{ text: "Sorry, I encountered an error. Please try again." }] };
+      const errorMessage: ChatMessage = { role: 'model', parts: [{ text: t('chat.errorMessage') }] };
       finalMessages = [...currentMessages, errorMessage];
       setMessages(finalMessages);
     } finally {
@@ -364,14 +415,15 @@ const App: React.FC = () => {
       
       if (!idToSave) return;
 
-      // Persist the final state of messages
+      // The data in finalMessages is now clean because it was built from clean state updates.
+      // No extra cleaning step is needed here.
       if (viewToSave === 'learningPath') {
         setLearningPathHistories(prev => ({ ...prev, [idToSave]: finalMessages }));
       } else if (viewToSave === 'customProject') {
         setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: finalMessages } : p));
       }
     }
-  }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId]);
+  }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId, t]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
@@ -486,19 +538,18 @@ const App: React.FC = () => {
         <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
             <div className="text-center">
                 <CodeIcon className="w-16 h-16 text-primary-600 animate-pulse mx-auto" />
-                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Loading AI Code Mentor...</p>
+                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">{t('loading')}</p>
             </div>
         </div>
     );
   }
 
-  // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
   if (!process.env.API_KEY) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">API Key Not Found</h1>
-          <p className="mt-2 text-gray-700 dark:text-gray-300">Please set your API_KEY environment variable to use the AI Code Mentor.</p>
+          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">{t('apiKeyNotFound')}</h1>
+          <p className="mt-2 text-gray-700 dark:text-gray-300">{t('apiKeyNotFoundMessage')}</p>
         </div>
       </div>
     );
@@ -537,11 +588,17 @@ const App: React.FC = () => {
           activeCustomProjectId={activeCustomProjectId}
           onSelectCustomProject={handleSelectCustomProject}
           onNewProject={() => setIsModalOpen(true)}
+          uiLanguage={i18n.language}
+          onUiLanguageChange={(lang) => i18n.changeLanguage(lang)}
+          aiLanguage={aiLanguage}
+          onAiLanguageChange={setAiLanguage}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           {!user && (
             <div className="bg-primary-100 dark:bg-primary-900/50 border border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200 px-4 py-2 rounded-lg text-sm text-center">
-              You are in guest mode. <button onClick={handleLogin} className="font-bold underline hover:text-primary-600 dark:hover:text-primary-300">Login</button> to save your progress.
+              <Trans i18nKey="guestModeMessage">
+                You are in guest mode. <button onClick={handleLogin} className="font-bold underline hover:text-primary-600 dark:hover:text-primary-300">Login</button> to save your progress.
+              </Trans>
             </div>
           )}
           <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
@@ -555,13 +612,13 @@ const App: React.FC = () => {
                     onClick={() => setActiveRightTab('playground')}
                     className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'playground' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
-                    <PlayIcon className="w-5 h-5"/> Playground
+                    <PlayIcon className="w-5 h-5"/> {t('tabs.playground')}
                   </button>
                   <button 
                     onClick={() => setActiveRightTab('notes')}
                     className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'notes' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
-                    <NoteIcon className="w-5 h-5"/> Notes
+                    <NoteIcon className="w-5 h-5"/> {t('tabs.notes')}
                   </button>
                 </div>
               </div>

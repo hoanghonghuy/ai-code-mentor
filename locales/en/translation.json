@@ -1,0 +1,90 @@
+{
+  "loading": "Loading AI Code Mentor...",
+  "apiKeyNotFound": "API Key Not Found",
+  "apiKeyNotFoundMessage": "Please set your API_KEY environment variable to use the AI Code Mentor.",
+  "guestModeMessage": "You are in guest mode. <1>Login</1> to save your progress.",
+  "header": {
+    "title": "AI Code Mentor",
+    "login": "Login",
+    "logout": "Logout",
+    "toggleTheme": "Toggle dark mode"
+  },
+  "userMenu": {
+    "logout": "Logout"
+  },
+  "sidebar": {
+    "myProjects": "My Projects",
+    "learning": "Learning",
+    "projects": "Projects",
+    "showBookmarkedOnly": "Show Bookmarked Only",
+    "lessons": "Lessons",
+    "achievements": "Achievements",
+    "settings": "Settings",
+    "guidedProject": "GUIDED PROJECT"
+  },
+  "chat": {
+    "title": "AI Mentor Chat",
+    "placeholder": "Ask your mentor...",
+    "send": "Send",
+    "searchPlaceholder": "Search messages...",
+    "searchResults": "{{current}} of {{total}}",
+    "noResults": "0 results",
+    "copyText": "Copy Text",
+    "copyMarkdown": "Copy Markdown",
+    "copied": "Copied",
+    "sources": "Sources",
+    "errorMessage": "Sorry, I encountered an error. Please try again."
+  },
+  "playground": {
+    "title": "Code Playground",
+    "run": "Run",
+    "running": "Running...",
+    "output": "Output:",
+    "executing": "Executing code..."
+  },
+  "notes": {
+    "title": "My Notes",
+    "disabled": "Notes are available in Learning Path mode.",
+    "selectLesson": "Select a lesson to start taking notes.",
+    "notesFor": "Notes for: <1>{{lessonTitle}}</1>",
+    "placeholder": "Type your notes for \"{{lessonTitle}}\" here..."
+  },
+  "achievementsView": {
+    "title": "Achievements"
+  },
+  "notification": {
+    "unlocked": "Achievement Unlocked!"
+  },
+  "settings": {
+    "customDocsTitle": "Custom Documentation Sources",
+    "customDocsDescription": "Add URLs to documentation for the AI to potentially reference. (Note: This is a foundational feature for future targeted lookups).",
+    "add": "Add",
+    "yourSources": "Your Sources",
+    "searchSources": "Search sources...",
+    "noSourcesFound": "No sources found for \"{{searchTerm}}\".",
+    "noSourcesAdded": "No custom sources added yet.",
+    "interfaceLanguage": "Interface Language",
+    "aiResponseLanguage": "AI Response Language",
+    "english": "English",
+    "vietnamese": "Vietnamese"
+  },
+  "customProjects": {
+    "noProjects": "No projects yet.",
+    "noProjectsHint": "Click \"New Project\" to start building!",
+    "newProject": "New Project"
+  },
+  "newProjectModal": {
+    "title": "Create a New Project",
+    "description": "Describe your project goal, and the AI Mentor will guide you from there.",
+    "projectName": "Project Name",
+    "projectNamePlaceholder": "e.g., Personal Portfolio",
+    "projectGoal": "What do you want to build?",
+    "projectGoalPlaceholder": "e.g., A simple website to showcase my design work, built with React and Tailwind CSS.",
+    "cancel": "Cancel",
+    "createProject": "Create Project"
+  },
+  "tabs": {
+    "playground": "Playground",
+    "notes": "Notes"
+  }
+}

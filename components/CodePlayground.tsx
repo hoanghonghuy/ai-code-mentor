@@ -1,8 +1,10 @@
 
 
+
 import React, { useState, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
+import { useTranslation } from 'react-i18next';
 
 interface CodePlaygroundProps {
   onFirstRun: () => void;
@@ -40,6 +42,7 @@ class Main {
 };
 
 const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
+  const { t } = useTranslation();
   const [language, setLanguage] = useState<SupportedLanguage>('javascript');
   const [code, setCode] = useState(defaultCode.javascript);
   const [output, setOutput] = useState('');
@@ -72,7 +75,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
     }
 
     setIsRunning(true);
-    setOutput('Executing code...');
+    setOutput(t('playground.executing'));
     
     try {
       const response = await ai.models.generateContent({
@@ -92,7 +95,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
-            <h2 className="text-lg font-semibold">Code Playground</h2>
+            <h2 className="text-lg font-semibold">{t('playground.title')}</h2>
             <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguage)}
@@ -111,7 +114,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
           className="p-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <PlayIcon className="w-5 h-5"/>
-          <span>{isRunning ? 'Running...' : 'Run'}</span>
+          <span>{isRunning ? t('playground.running') : t('playground.run')}</span>
         </button>
       </div>
       <div className="flex-1 flex flex-col min-h-0">
@@ -126,7 +129,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
         </div>
         <div className="h-48 border-t border-gray-200 dark:border-gray-700">
             <div className="p-4 bg-gray-100 dark:bg-black/20 h-full">
-                <h3 className="text-sm font-semibold mb-2">Output:</h3>
+                <h3 className="text-sm font-semibold mb-2">{t('playground.output')}</h3>
                 <pre className="text-sm whitespace-pre-wrap font-mono h-full overflow-y-auto">{output}</pre>
             </div>
         </div>

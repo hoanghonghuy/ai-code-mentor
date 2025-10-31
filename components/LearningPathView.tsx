@@ -4,6 +4,7 @@ import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, Br
 import AchievementsView from './AchievementsView';
 import SettingsView from './SettingsView';
 import CustomProjectView from './CustomProjectView';
+import { useTranslation } from 'react-i18next';
 
 interface LearningPathProps {
   activeView: 'learningPath' | 'customProject';
@@ -26,6 +27,10 @@ interface LearningPathProps {
   activeCustomProjectId: string | null;
   onSelectCustomProject: (projectId: string) => void;
   onNewProject: () => void;
+  uiLanguage: string;
+  onUiLanguageChange: (lang: string) => void;
+  aiLanguage: string;
+  onAiLanguageChange: (lang: string) => void;
 }
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
@@ -44,6 +49,7 @@ interface ModuleViewProps {
 }
 
 const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, showOnlyBookmarked }) => {
+    const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = React.useState(true);
     
     if (module.project) {
@@ -62,7 +68,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
                          <BriefcaseIcon className="w-6 h-6 text-primary-600 dark:text-primary-400 flex-shrink-0" />
                         <div>
                            <h3 className="font-semibold text-gray-700 dark:text-gray-200">{project.title}</h3>
-                           <p className="text-xs text-primary-700 dark:text-primary-300 font-medium">GUIDED PROJECT</p>
+                           <p className="text-xs text-primary-700 dark:text-primary-300 font-medium">{t('sidebar.guidedProject')}</p>
                         </div>
                     </div>
                     <ChevronDownIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -168,7 +174,8 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 }
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject } = props;
+  const { t } = useTranslation();
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   
@@ -201,15 +208,15 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
             <div className="flex-shrink-0">
                 <div className="flex items-start justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-lg font-bold">
-                        {activeView === 'learningPath' ? learningPath.title : 'My Projects'}
+                        {activeView === 'learningPath' ? learningPath.title : t('sidebar.myProjects')}
                     </h2>
                     <button onClick={() => setIsOpen(false)} className="md:hidden p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
                         <XIcon className="w-5 h-5" />
                     </button>
                 </div>
                  <div className="flex border-b border-gray-200 dark:border-gray-700">
-                    <ViewToggleButton viewId="learningPath" icon={<CodeIcon className="w-5 h-5" />}>Learning</ViewToggleButton>
-                    <ViewToggleButton viewId="customProject" icon={<FolderIcon className="w-5 h-5" />}>Projects</ViewToggleButton>
+                    <ViewToggleButton viewId="learningPath" icon={<CodeIcon className="w-5 h-5" />}>{t('sidebar.learning')}</ViewToggleButton>
+                    <ViewToggleButton viewId="customProject" icon={<FolderIcon className="w-5 h-5" />}>{t('sidebar.projects')}</ViewToggleButton>
                 </div>
             </div>
             {activeView === 'learningPath' ? (
@@ -240,16 +247,16 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                                         onChange={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
                                         className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 bg-gray-100 dark:bg-gray-900"
                                     />
-                                    Show Bookmarked Only
+                                    {t('sidebar.showBookmarkedOnly')}
                                 </label>
                             </div>
                         )}
                     </div>
                     <div className="p-2 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 space-x-1">
-                            <TabButton tabId="lessons">Lessons</TabButton>
-                            <TabButton tabId="achievements">Achievements</TabButton>
-                            <TabButton tabId="settings">Settings</TabButton>
+                            <TabButton tabId="lessons">{t('sidebar.lessons')}</TabButton>
+                            <TabButton tabId="achievements">{t('sidebar.achievements')}</TabButton>
+                            <TabButton tabId="settings">{t('sidebar.settings')}</TabButton>
                         </div>
                     </div>
                     <div className="flex-1 p-4 overflow-y-auto">
@@ -260,7 +267,15 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                         ) : activeTab === 'achievements' ? (
                             <AchievementsView achievements={achievements} />
                         ) : (
-                            <SettingsView customDocs={customDocs} onAddDoc={onAddDoc} onRemoveDoc={onRemoveDoc} />
+                            <SettingsView 
+                                customDocs={customDocs} 
+                                onAddDoc={onAddDoc} 
+                                onRemoveDoc={onRemoveDoc}
+                                uiLanguage={uiLanguage}
+                                onUiLanguageChange={onUiLanguageChange}
+                                aiLanguage={aiLanguage}
+                                onAiLanguageChange={onAiLanguageChange}
+                             />
                         )}
                     </div>
                 </>

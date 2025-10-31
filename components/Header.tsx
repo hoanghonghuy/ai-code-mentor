@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Theme } from '../types';
 import { SunIcon, MoonIcon, CodeIcon, MenuIcon, StarIcon, LoginIcon, LogoutIcon, ChevronDownIcon } from './icons';
 import type { User } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
   theme: Theme;
@@ -14,6 +15,7 @@ interface HeaderProps {
 }
 
 const UserMenu: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -46,7 +48,7 @@ const UserMenu: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogo
                         className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                         <LogoutIcon className="w-4 h-4" />
-                        Logout
+                        {t('userMenu.logout')}
                     </button>
                 </div>
             )}
@@ -55,6 +57,7 @@ const UserMenu: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogo
 };
 
 const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, points, user, onLogin, onLogout }) => {
+  const { t } = useTranslation();
   return (
     <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
       <div className="flex items-center gap-4">
@@ -63,7 +66,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, poin
         </button>
         <div className="flex items-center gap-2">
             <CodeIcon className="w-8 h-8 text-primary-600"/>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">AI Code Mentor</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('header.title')}</h1>
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -74,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, poin
         <button
           onClick={toggleTheme}
           className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          aria-label="Toggle dark mode"
+          aria-label={t('header.toggleTheme')}
         >
           {theme === 'light' ? (
             <MoonIcon className="w-6 h-6 text-gray-700" />
@@ -91,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, poin
                 className="flex items-center gap-2 p-2 px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold"
             >
                 <LoginIcon className="w-5 h-5" />
-                <span>Login</span>
+                <span>{t('header.login')}</span>
             </button>
         )}
       </div>

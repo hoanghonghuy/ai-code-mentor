@@ -189,3 +189,11 @@ export const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
     </svg>
 );
+
+const iconMap: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
+    TrophyIcon,
+};
+
+export const getIcon = (name: string): React.FC<React.SVGProps<SVGSVGElement>> => {
+    return iconMap[name] || CodeIcon; // Default to CodeIcon if not found
+};

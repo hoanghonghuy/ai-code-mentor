@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CustomProject } from '../types';
 import { FolderIcon, PlusIcon } from './icons';
+import { useTranslation } from 'react-i18next';
 
 interface CustomProjectViewProps {
   projects: CustomProject[];
@@ -10,6 +11,7 @@ interface CustomProjectViewProps {
 }
 
 const CustomProjectView: React.FC<CustomProjectViewProps> = ({ projects, activeProjectId, onSelectProject, onNewProject }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 flex-1 overflow-y-auto">
@@ -36,8 +38,8 @@ const CustomProjectView: React.FC<CustomProjectViewProps> = ({ projects, activeP
           </ul>
         ) : (
           <div className="text-center text-gray-500 dark:text-gray-400 py-10">
-            <p>No projects yet.</p>
-            <p className="text-sm">Click "New Project" to start building!</p>
+            <p>{t('customProjects.noProjects')}</p>
+            <p className="text-sm">{t('customProjects.noProjectsHint')}</p>
           </div>
         )}
       </div>
@@ -47,7 +49,7 @@ const CustomProjectView: React.FC<CustomProjectViewProps> = ({ projects, activeP
           className="w-full flex items-center justify-center gap-2 p-3 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors"
         >
           <PlusIcon className="w-5 h-5" />
-          <span>New Project</span>
+          <span>{t('customProjects.newProject')}</span>
         </button>
       </div>
     </div>

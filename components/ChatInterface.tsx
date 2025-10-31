@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon } from './icons';
+import { useTranslation } from 'react-i18next';
 
 // Add hljs to the window object for TypeScript
 declare const hljs: any;
@@ -183,6 +184,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
 
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading }) => {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -288,7 +290,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold">AI Mentor Chat</h2>
+        <h2 className="text-lg font-semibold">{t('chat.title')}</h2>
         <button
             onClick={handleToggleSearch}
             className={`p-2 rounded-md ${isSearchOpen ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -308,7 +310,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                     type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search messages..."
+                    placeholder={t('chat.searchPlaceholder')}
                     className="w-full p-1.5 pl-8 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
                     autoFocus
                 />
@@ -316,7 +318,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
             <button onClick={() => handleNavigateSearch('prev')} disabled={searchResults.length < 2} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"><ChevronUpIcon className="w-5 h-5"/></button>
             <button onClick={() => handleNavigateSearch('next')} disabled={searchResults.length < 2} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"><ChevronDownIcon className="w-5 h-5"/></button>
             <span className="text-xs text-gray-500 dark:text-gray-400 w-16 text-center">
-              {searchResults.length > 0 ? `${currentResultIndex + 1} of ${searchResults.length}` : searchQuery ? '0 results' : ''}
+              {searchResults.length > 0 ? t('chat.searchResults', { current: currentResultIndex + 1, total: searchResults.length }) : searchQuery ? t('chat.noResults') : ''}
             </span>
             <button onClick={handleToggleSearch} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><XIcon className="w-5 h-5"/></button>
           </div>
@@ -345,7 +347,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                             <div className="border-t border-gray-300 dark:border-gray-600 mt-2 p-3">
                               <h4 className="text-xs font-bold mb-2 flex items-center gap-2 text-gray-600 dark:text-gray-400">
                                 <LinkIcon className="w-4 h-4" />
-                                Sources
+                                {t('chat.sources')}
                               </h4>
                               <ul className="space-y-1">
                                 {/* FIX: Check for chunk.web.uri as it is now optional in the type definition */}
@@ -378,7 +380,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                                     ) : (
                                         <CopyIcon className="w-3.5 h-3.5" />
                                     )}
-                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'text' ? 'Copied' : 'Copy Text'}</span>
+                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'text' ? t('chat.copied') : t('chat.copyText')}</span>
                                 </button>
                                  <button
                                     onClick={() => handleCopyFullMessage(msg.parts[0].text, index, 'markdown')}
@@ -390,7 +392,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                                     ) : (
                                         <CopyIcon className="w-3.5 h-3.5" />
                                     )}
-                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? 'Copied' : 'Copy Markdown'}</span>
+                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? t('chat.copied') : t('chat.copyMarkdown')}</span>
                                 </button>
                             </div>
                         )}
@@ -418,7 +420,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask your mentor..."
+            placeholder={t('chat.placeholder')}
             className="flex-1 p-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
             disabled={isLoading}
           />
@@ -428,7 +430,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
             className="p-2 px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-primary-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <SendIcon className="w-5 h-5" />
-            <span>Send</span>
+            <span>{t('chat.send')}</span>
           </button>
         </form>
       </div>

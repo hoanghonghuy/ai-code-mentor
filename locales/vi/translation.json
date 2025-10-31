@@ -1,0 +1,90 @@
+{
+  "loading": "Đang tải AI Code Mentor...",
+  "apiKeyNotFound": "Không tìm thấy khóa API",
+  "apiKeyNotFoundMessage": "Vui lòng đặt biến môi trường API_KEY của bạn để sử dụng AI Code Mentor.",
+  "guestModeMessage": "Bạn đang ở chế độ khách. <1>Đăng nhập</1> để lưu tiến trình của bạn.",
+  "header": {
+    "title": "AI Code Mentor",
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "toggleTheme": "Chuyển đổi chế độ tối"
+  },
+  "userMenu": {
+    "logout": "Đăng xuất"
+  },
+  "sidebar": {
+    "myProjects": "Dự án của tôi",
+    "learning": "Học tập",
+    "projects": "Dự án",
+    "showBookmarkedOnly": "Chỉ hiện thị mục đã đánh dấu",
+    "lessons": "Bài học",
+    "achievements": "Thành tích",
+    "settings": "Cài đặt",
+    "guidedProject": "DỰ ÁN HƯỚNG DẪN"
+  },
+  "chat": {
+    "title": "Trò chuyện với Mentor AI",
+    "placeholder": "Hỏi người hướng dẫn của bạn...",
+    "send": "Gửi",
+    "searchPlaceholder": "Tìm kiếm tin nhắn...",
+    "searchResults": "{{current}} trên {{total}}",
+    "noResults": "0 kết quả",
+    "copyText": "Sao chép văn bản",
+    "copyMarkdown": "Sao chép Markdown",
+    "copied": "Đã sao chép",
+    "sources": "Nguồn",
+    "errorMessage": "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại."
+  },
+  "playground": {
+    "title": "Sân chơi mã",
+    "run": "Chạy",
+    "running": "Đang chạy...",
+    "output": "Đầu ra:",
+    "executing": "Đang thực thi mã..."
+  },
+  "notes": {
+    "title": "Ghi chú của tôi",
+    "disabled": "Ghi chú chỉ khả dụng trong chế độ Lộ trình học tập.",
+    "selectLesson": "Chọn một bài học để bắt đầu ghi chú.",
+    "notesFor": "Ghi chú cho: <1>{{lessonTitle}}</1>",
+    "placeholder": "Nhập ghi chú của bạn cho \"{{lessonTitle}}\" tại đây..."
+  },
+  "achievementsView": {
+    "title": "Thành tích"
+  },
+  "notification": {
+    "unlocked": "Đã mở khóa thành tích!"
+  },
+  "settings": {
+    "customDocsTitle": "Nguồn tài liệu tùy chỉnh",
+    "customDocsDescription": "Thêm URL vào tài liệu để AI có thể tham khảo. (Lưu ý: Đây là tính năng nền tảng cho các tra cứu được nhắm mục tiêu trong tương lai).",
+    "add": "Thêm",
+    "yourSources": "Nguồn của bạn",
+    "searchSources": "Tìm kiếm nguồn...",
+    "noSourcesFound": "Không tìm thấy nguồn nào cho \"{{searchTerm}}\".",
+    "noSourcesAdded": "Chưa có nguồn tùy chỉnh nào được thêm.",
+    "interfaceLanguage": "Ngôn ngữ giao diện",
+    "aiResponseLanguage": "Ngôn ngữ phản hồi của AI",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  },
+  "customProjects": {
+    "noProjects": "Chưa có dự án nào.",
+    "noProjectsHint": "Nhấp vào \"Dự án mới\" để bắt đầu xây dựng!",
+    "newProject": "Dự án mới"
+  },
+  "newProjectModal": {
+    "title": "Tạo dự án mới",
+    "description": "Mô tả mục tiêu dự án của bạn, và AI Mentor sẽ hướng dẫn bạn từ đó.",
+    "projectName": "Tên dự án",
+    "projectNamePlaceholder": "VD: Portfolio cá nhân",
+    "projectGoal": "Bạn muốn xây dựng cái gì?",
+    "projectGoalPlaceholder": "VD: Một trang web đơn giản để giới thiệu công việc thiết kế của tôi, được xây dựng bằng React và Tailwind CSS.",
+    "cancel": "Hủy",
+    "createProject": "Tạo dự án"
+  },
+  "tabs": {
+    "playground": "Sân chơi",
+    "notes": "Ghi chú"
+  }
+}
