@@ -65,7 +65,8 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: The getInitialState function was called without the required 'pathId' argument. Provided 'js-basics' as a default argument to correctly initialize the application state.
+  // Fix: The getInitialState function was called without the required 'pathId' argument.
+  // Provided 'js-basics' as a default argument to correctly initialize the application state.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State

@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon } from './icons';
@@ -412,8 +409,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
               >
                 {msg.role === 'model' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 flex items-center justify-center"><BotIcon className="w-5 h-5 text-white" /></div>}
                 
-                <div className="flex flex-col items-start max-w-xl">
-                    <div className="w-full group">
+                <div className="flex flex-col max-w-4xl">
+                    <div className="group">
                         <div className={`rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
                           <div className="p-3">
                             {msg.role === 'model' && index === messages.length - 1 && isLoading ? (
