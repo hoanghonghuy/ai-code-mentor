@@ -56,6 +56,13 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ]
             },
             {
+                title: 'Module 7: Error Handling & Storage',
+                lessons: [
+                    { id: 'js-7-1', title: 'Error Handling', prompt: 'What is error handling in JavaScript? Explain `try...catch...finally` blocks with a practical example of parsing invalid JSON.', completed: false },
+                    { id: 'js-7-2', title: 'Browser Storage', prompt: 'Explain the difference between `localStorage` and `sessionStorage`. Show me how to use them to store and retrieve simple string data.', completed: false },
+                ]
+            },
+            {
                 title: 'Project: Build a Todo List App',
                 project: {
                     id: 'proj-todo-app',
@@ -118,6 +125,14 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
             {
+                title: 'Module 6: File I/O & Error Handling',
+                lessons: [
+                    { id: 'py-6-1', title: 'Reading from a File', prompt: 'Show me how to open and read a text file in Python using `with open(...) as f:`.', completed: false },
+                    { id: 'py-6-2', title: 'Writing to a File', prompt: 'Teach me how to write and append text to a file in Python.', completed: false },
+                    { id: 'py-6-3', title: 'Exception Handling', prompt: 'What are exceptions in Python? Explain `try`, `except`, and `finally` blocks for handling potential errors like `FileNotFoundError`.', completed: false },
+                ],
+            },
+            {
                 title: 'Project: Simple Calculator',
                 project: {
                     id: 'proj-py-calculator',
@@ -129,6 +144,114 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                         { id: 'proj-py-calc-3', title: 'Step 3: Handle Errors', prompt: 'What happens if the user tries to divide by zero or enters invalid input? Help me add `try-except` blocks to handle these errors gracefully.', completed: false },
                         { id: 'proj-py-calc-4', title: 'Step 4: Refactor into Functions', prompt: 'Let\'s make our code cleaner. Guide me to refactor the calculation logic into its own function.', completed: false },
                         { id: 'proj-py-calc-5', title: 'Step 5: Put it in a Loop', prompt: 'How can I make the calculator run continuously? Guide me to wrap the code in a `while` loop so the user can perform multiple calculations and choose to exit.', completed: false },
+                    ]
+                }
+            }
+        ],
+    },
+    'typescript-basics': {
+        id: 'typescript-basics',
+        title: 'TypeScript Essentials',
+        modules: [
+            {
+                title: 'Module 1: Why TypeScript?',
+                lessons: [
+                    { id: 'ts-1-1', title: 'What is TypeScript?', prompt: 'Explain what TypeScript is and how it relates to JavaScript. What are the main benefits of using it?', completed: false },
+                    { id: 'ts-1-2', title: 'Setting up a TS Project', prompt: 'Guide me through setting up a basic TypeScript project, including initializing a `tsconfig.json` file and compiling a simple `.ts` file to `.js`.', completed: false },
+                    { id: 'ts-1-3', title: 'Type Inference', prompt: 'What is type inference in TypeScript? Show me an example where I don\'t have to explicitly write the type.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 2: Basic & Complex Types',
+                lessons: [
+                    { id: 'ts-2-1', title: 'Basic Types', prompt: 'Teach me about the basic types in TypeScript: `string`, `number`, `boolean`, `null`, `undefined`, and `any`.', completed: false },
+                    { id: 'ts-2-2', title: 'Arrays and Tuples', prompt: 'How do I type arrays in TypeScript? Also, explain what a Tuple is and how it differs from a regular array.', completed: false },
+                    { id: 'ts-2-3', title: 'Objects & Enums', prompt: 'Show me how to define the shape of an object using type annotations. Also introduce me to `enum` for named constants.', completed: false },
+                    { id: 'ts-2-4', title: 'Union & Intersection Types', prompt: 'Explain union types (`|`) for variables that can be one of several types, and intersection types (`&`) for combining multiple types.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 3: Interfaces and Functions',
+                lessons: [
+                    { id: 'ts-3-1', title: 'Type Aliases vs Interfaces', prompt: 'What are `type` aliases and `interface`s? Explain the differences and when I should use each one.', completed: false },
+                    { id: 'ts-3-2', title: 'Typing Functions', prompt: 'Show me how to add types to function parameters and return values. Explain the `void` and `never` return types.', completed: false },
+                    { id: 'ts-3-3', title: 'Optional & Default Parameters', prompt: 'How do I create functions with optional parameters (`?`) or parameters with default values in TypeScript?', completed: false },
+                ]
+            },
+            {
+                title: 'Module 4: Advanced Concepts',
+                lessons: [
+                    { id: 'ts-4-1', title: 'Generics', prompt: 'What are Generics in TypeScript? Explain how they allow us to create reusable components with a simple function or class example.', completed: false },
+                    { id: 'ts-4-2', title: 'Using Types from Libraries', prompt: 'How do I use types from third-party libraries? Explain DefinitelyTyped and how to install type declaration files (e.g., `@types/node`).', completed: false },
+                    { id: 'ts-4-3', title: 'Type Narrowing', prompt: 'Explain type narrowing using `typeof` and `instanceof` guards inside conditional blocks.', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Refactor a JS App to TS',
+                project: {
+                    id: 'proj-ts-refactor',
+                    title: 'Project: Refactor a JS App to TS',
+                    description: 'Take a simple JavaScript To-Do list application and convert it to TypeScript, adding strong types for better safety and readability.',
+                    steps: [
+                        { id: 'proj-ts-ref-1', title: 'Step 1: The JS Codebase', prompt: 'Provide me with a simple, functional JavaScript To-Do list app. It should have functions to add, remove, and toggle tasks.', completed: false },
+                        { id: 'proj-ts-ref-2', title: 'Step 2: Setup & First Types', prompt: 'Guide me to set up the TypeScript project. Let\'s start by creating an `interface` for a `Todo` item and typing the initial array of todos.', completed: false },
+                        { id: 'proj-ts-ref-3', title: 'Step 3: Typing Functions', prompt: 'Help me add type annotations to all the functions (e.g., `addTodo`, `toggleTodo`). Ensure parameters and return values are correctly typed.', completed: false },
+                        { id: 'proj-ts-ref-4', title: 'Step 4: DOM Interaction', prompt: 'Teach me how to correctly type DOM elements in TypeScript, such as `HTMLInputElement`, and handle potential `null` values when selecting elements.', completed: false },
+                        { id: 'proj-ts-ref-5', title: 'Step 5: Final Review', prompt: 'Let\'s review the final TypeScript code. Explain the benefits we gained from this refactoring, like catching potential bugs and improving developer experience.', completed: false },
+                    ]
+                }
+            }
+        ],
+    },
+    'sql-basics': {
+        id: 'sql-basics',
+        title: 'SQL & Database Fundamentals',
+        modules: [
+            {
+                title: 'Module 1: Introduction to Databases',
+                lessons: [
+                    { id: 'sql-1-1', title: 'What is a Relational Database?', prompt: 'Explain what a relational database is. Use an analogy of a spreadsheet with multiple sheets to explain tables, rows, and columns.', completed: false },
+                    { id: 'sql-1-2', title: 'The SQL Language', prompt: 'What is SQL? Explain the different categories of SQL commands (DDL, DML, DQL).', completed: false },
+                    { id: 'sql-1-3', title: 'Primary & Foreign Keys', prompt: 'Explain the concepts of Primary Keys for unique identification and Foreign Keys for linking tables together.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 2: Querying Data (DQL)',
+                lessons: [
+                    { id: 'sql-2-1', title: 'The SELECT Statement', prompt: 'Teach me the basic `SELECT` statement. Show me how to select all columns (`*`) and specific columns from a table.', completed: false },
+                    { id: 'sql-2-2', title: 'Filtering with WHERE', prompt: 'How do I filter rows? Explain the `WHERE` clause with operators like `=`, `!=`, `>`, `<`, `AND`, `OR`, and `IN`.', completed: false },
+                    { id: 'sql-2-3', title: 'Sorting with ORDER BY', prompt: 'Teach me how to sort results using `ORDER BY`. Show me how to sort in ascending (`ASC`) and descending (`DESC`) order.', completed: false },
+                    { id: 'sql-2-4', title: 'Aggregate Functions', prompt: 'What are aggregate functions? Explain `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX` with examples.', completed: false },
+                    { id: 'sql-2-5', title: 'Grouping with GROUP BY', prompt: 'Teach me how to use `GROUP BY` with aggregate functions to group rows that have the same values.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 3: Manipulating Data (DML)',
+                lessons: [
+                    { id: 'sql-3-1', title: 'Inserting Data', prompt: 'Show me how to add a new row to a table using the `INSERT INTO` statement.', completed: false },
+                    { id: 'sql-3-2', title: 'Updating Data', prompt: 'Teach me how to modify existing rows using the `UPDATE` statement. Emphasize the importance of the `WHERE` clause.', completed: false },
+                    { id: 'sql-3-3', title: 'Deleting Data', prompt: 'How do I remove rows from a table? Explain the `DELETE` statement and the importance of the `WHERE` clause.', completed: false },
+                ]
+            },
+            {
+                title: 'Module 4: Joining Tables',
+                lessons: [
+                    { id: 'sql-4-1', title: 'INNER JOIN', prompt: 'Explain what an `INNER JOIN` is and how it\'s used to combine rows from two or more tables based on a related column.', completed: false },
+                    { id: 'sql-4-2', title: 'LEFT & RIGHT JOIN', prompt: 'What is the difference between an `INNER JOIN`, a `LEFT JOIN`, and a `RIGHT JOIN`? Provide a simple example.', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Design a Blog Database',
+                project: {
+                    id: 'proj-sql-blog',
+                    title: 'Project: Design a Blog Database',
+                    description: 'Design and write SQL queries for a simple blog with users, posts, and comments.',
+                    steps: [
+                        { id: 'proj-sql-blog-1', title: 'Step 1: Data Definition (DDL)', prompt: 'Guide me to write the `CREATE TABLE` statements for three tables: `users` (id, username, email), `posts` (id, user_id, title, body), and `comments` (id, post_id, user_id, text). Define primary and foreign keys.', completed: false },
+                        { id: 'proj-sql-blog-2', title: 'Step 2: Insert Sample Data (DML)', prompt: 'Help me write `INSERT INTO` statements to populate the tables with some sample data: at least 2 users, 3 posts, and 5 comments.', completed: false },
+                        { id: 'proj-sql-blog-3', title: 'Step 3: Basic Queries', prompt: 'Guide me to write a SQL query to select all posts. Then write another query to find all posts written by a specific user.', completed: false },
+                        { id: 'proj-sql-blog-4', title: 'Step 4: Joining Tables', prompt: 'Teach me how to write a query that joins `posts` and `users` to show each post\'s title and the username of its author.', completed: false },
+                        { id: 'proj-sql-blog-5', title: 'Step 5: Complex Query', prompt: 'Let\'s write a more complex query. Guide me to find a specific post, and show its title, author\'s username, and all the comments on it along with the commenter\'s username. This will require multiple joins.', completed: false },
                     ]
                 }
             }
@@ -169,6 +292,14 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     { id: 'cs-4-2', title: 'Classes & Objects', prompt: 'Explain classes as blueprints for objects. Show me how to create a simple `Person` class with fields.', completed: false },
                     { id: 'cs-4-3', title: 'Constructors & Properties', prompt: 'What are constructors? And how do I use Properties (getters/setters) to encapsulate data in C#?', completed: false },
                     { id: 'cs-4-4', title: 'Inheritance', prompt: 'Teach me about inheritance in C#. Create a base class and a derived class.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 5: Advanced C#',
+                lessons: [
+                    { id: 'cs-5-1', title: 'LINQ', prompt: 'What is LINQ? Show me a simple example of how to use it to query a `List` of objects.', completed: false },
+                    { id: 'cs-5-2', title: 'Exception Handling', prompt: 'Introduce me to `try-catch-finally` blocks for handling errors in C#.', completed: false },
+                    { id: 'cs-5-3', title: 'Async/Await', prompt: 'Explain the basics of asynchronous programming in C# using `async` and `await` with a simple example.', completed: false },
                 ],
             },
             {
@@ -222,6 +353,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     { id: 'go-4-1', title: 'Methods on Structs', prompt: 'How do I define a method for a struct I created? Show an example.', completed: false },
                     { id: 'go-4-2', title: 'Interfaces', prompt: 'What are interfaces in Go? Explain their purpose with a common example like the `io.Reader` interface.', completed: false },
                     { id: 'go-4-3', title: 'Intro to Goroutines', prompt: 'What is a goroutine? Give a very simple explanation of how to start one using the `go` keyword for concurrent execution.', completed: false },
+                    { id: 'go-4-4', title: 'Intro to Channels', prompt: 'What are channels in Go? Explain how they are used for communication between goroutines with a simple example.', completed: false },
                 ],
             },
             {
@@ -271,10 +403,11 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
             {
-                title: 'Module 4: Exception Handling',
+                title: 'Module 4: Exception Handling & File I/O',
                 lessons: [
                     { id: 'java-4-1', title: 'Try-Catch Blocks', prompt: 'Introduce me to exception handling in Java using `try` and `catch` blocks.', completed: false },
                     { id: 'java-4-2', title: 'Checked vs. Unchecked', prompt: 'What is the difference between checked and unchecked exceptions in Java?', completed: false },
+                    { id: 'java-4-3', title: 'Reading a File', prompt: 'Show me how to read a text file line by line in Java using `BufferedReader`.', completed: false },
                 ],
             },
             {
@@ -333,7 +466,14 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
             {
-                title: 'Project: Interactive Portfolio Card',
+                title: 'Module 5: Accessibility & Responsive Design',
+                lessons: [
+                    { id: 'fe-5-1', title: 'Web Accessibility (A11y)', prompt: 'What is web accessibility? Explain its importance and give three practical tips, like using semantic HTML and `alt` text for images.', completed: false },
+                    { id: 'fe-5-2', title: 'Responsive Design', prompt: 'What is responsive design? Explain the concept of mobile-first and how to use CSS media queries with a simple example.', completed: false },
+                ],
+            },
+            {
+                title: 'Project: Simple Weather App',
                 project: {
                     id: 'proj-fe-card',
                     title: 'Project: Simple Weather App',
@@ -341,7 +481,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     steps: [
                         { id: 'proj-fe-card-1', title: 'Step 1: Basic React Setup', prompt: 'Guide me to set up a basic React component for a weather app. It should have an input for a city name and a button.', completed: false },
                         { id: 'proj-fe-card-2', title: 'Step 2: State Management', prompt: 'Help me add state to store the city input and the fetched weather data.', completed: false },
-                        { id: 'proj-fe-card-3', title: 'Step 3: Fetching API Data', prompt: 'Let\'s use the OpenWeatherMap API (or a similar free weather API). Teach me how to fetch data for the entered city when the button is clicked.', completed: false },
+                        { id: 'proj-fe-card-3', title: 'Step 3: Fetching API Data', prompt: 'Let\'s use a free weather API. Teach me how to fetch data for the entered city when the button is clicked.', completed: false },
                         { id: 'proj-fe-card-4', title: 'Step 4: Displaying Weather', prompt: 'Guide me to conditionally render the weather data (temperature, description) after it has been fetched. Also, handle loading and error states.', completed: false },
                     ]
                 }
@@ -381,11 +521,19 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'fs-4-1', title: 'CORS', prompt: 'What is Cross-Origin Resource Sharing (CORS) and why is it a common issue in full-stack development? How do you fix it on an Express server?', completed: false },
                     { id: 'fs-4-2', title: 'Fetching from React', prompt: 'Show me how to make a `fetch` request from a React frontend to a local Express backend API.', completed: false },
-                    { id: 'fs-4-3', title: 'Authentication Concepts', prompt: 'Explain the basic concept of authentication. What is the difference between stateful (sessions) and stateless (JWT) authentication?', completed: false },
+                    { id: 'fs-4-3', title: 'Environment Variables', prompt: 'What are environment variables and why are they important for security and configuration? Show a basic example with `.env` files in a Node.js app.', completed: false },
                 ],
             },
             {
-                title: 'Project: Simple API with Node.js',
+                title: 'Module 5: Authentication & Deployment',
+                lessons: [
+                    { id: 'fs-5-1', title: 'Authentication Concepts', prompt: 'Explain the basic concept of authentication. What is the difference between stateful (sessions) and stateless (JWT) authentication?', completed: false },
+                    { id: 'fs-5-2', title: 'Password Hashing', prompt: 'Why should I never store passwords in plain text? Explain the concept of password hashing using a library like bcrypt.', completed: false },
+                    { id: 'fs-5-3', title: 'Deployment Concepts', prompt: 'What does it mean to "deploy" an application? Briefly explain the role of a platform like Vercel or Heroku.', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Full-Stack To-Do List',
                 project: {
                     id: 'proj-fs-api',
                     title: 'Project: Full-Stack To-Do List',
@@ -429,10 +577,11 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ],
             },
              {
-                title: 'Module 4: Working with Data',
+                title: 'Module 4: Working with Data & Device APIs',
                 lessons: [
                     { id: 'mob-4-1', title: 'Fetching API Data', prompt: 'How do I fetch data from a remote server in a React Native app? Show an example using `fetch` and `useEffect`.', completed: false },
-                    { id: 'mob-4-2', title: 'Device Storage', prompt: 'How can I save data permanently on the user\'s device? Explain the basics of using `AsyncStorage`.', completed: false },
+                    { id: 'mob-4-2', title: 'Device Storage', prompt: 'How can I save data permanently on the user\'s device? Explain the basics of using a library like `AsyncStorage`.', completed: false },
+                    { id: 'mob-4-3', title: 'Device Permissions', prompt: 'How do I ask for device permissions, for example, to use the Camera or Location? Briefly explain the concept.', completed: false },
                 ],
             },
             {

@@ -46,7 +46,7 @@ export interface LearningModule {
   project?: Project;
 }
 
-export type LearningPathId = 'js-basics' | 'python-basics' | 'csharp-basics' | 'go-basics' | 'java-basics' | 'frontend-basics' | 'fullstack-basics' | 'mobile-basics';
+export type LearningPathId = 'js-basics' | 'python-basics' | 'csharp-basics' | 'go-basics' | 'java-basics' | 'frontend-basics' | 'fullstack-basics' | 'mobile-basics' | 'typescript-basics' | 'sql-basics';
 
 export interface LearningPath {
   id: LearningPathId;
