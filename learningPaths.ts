@@ -59,10 +59,11 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 ]
             },
             {
-                title: 'Module 7: Error Handling & Storage',
+                title: 'Module 7: Data & Storage',
                 lessons: [
                     { id: 'js-7-1', title: 'Error Handling', prompt: 'What is error handling in JavaScript? Explain `try...catch...finally` blocks with a practical example of parsing invalid JSON.', completed: false },
                     { id: 'js-7-2', title: 'Browser Storage', prompt: 'Explain the difference between `localStorage` and `sessionStorage`. Show me how to use them to store and retrieve simple string data.', completed: false },
+                    { id: 'js-7-3', title: 'JSON Deep Dive', prompt: 'What is JSON? Explain how to use `JSON.stringify` to convert a JavaScript object to a JSON string and `JSON.parse` to convert it back.', completed: false },
                 ]
             },
             {
@@ -133,6 +134,7 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                     { id: 'py-6-1', title: 'Reading from a File', prompt: 'Show me how to open and read a text file in Python using `with open(...) as f:`.', completed: false },
                     { id: 'py-6-2', title: 'Writing to a File', prompt: 'Teach me how to write and append text to a file in Python.', completed: false },
                     { id: 'py-6-3', title: 'Exception Handling', prompt: 'What are exceptions in Python? Explain `try`, `except`, and `finally` blocks for handling potential errors like `FileNotFoundError`.', completed: false },
+                    { id: 'py-6-4', title: 'List Comprehensions', prompt: 'What are list comprehensions in Python? Show me how they can be a concise way to create lists, with a simple example.', completed: false },
                 ],
             },
             {
@@ -655,6 +657,107 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                         { id: 'proj-mob-tip-3', title: 'Step 3: Calculation Logic', prompt: 'Teach me how to calculate a 15% tip and the total bill whenever the input amount changes. Handle cases where the input is not a valid number.', completed: false },
                         { id: 'proj-mob-tip-4', title: 'Step 4: Displaying the Result', prompt: 'How do I display the calculated tip and total in the `Text` components? Make sure they are formatted as currency.', completed: false },
                         { id: 'proj-mob-tip-5', title: 'Step 5: Add Tip Buttons', prompt: 'Let\'s add buttons (e.g., 10%, 15%, 20%) to let the user select a tip percentage quickly. Update the calculation logic to use the selected percentage.', completed: false },
+                    ]
+                }
+            }
+        ],
+    },
+    'devops-basics': {
+        id: 'devops-basics',
+        title: 'DevOps Fundamentals',
+        modules: [
+            {
+                title: 'Module 1: Core Concepts',
+                lessons: [
+                    { id: 'devops-1-1', title: 'What is DevOps?', prompt: 'Explain what DevOps is to a beginner. Cover the cultural shift, CAMS model (Culture, Automation, Measurement, Sharing), and its main goals.', completed: false },
+                    { id: 'devops-1-2', title: 'The DevOps Lifecycle', prompt: 'Describe the phases of the DevOps lifecycle: Plan, Code, Build, Test, Release, Deploy, Operate, and Monitor. Give a brief explanation of each phase.', completed: false },
+                    { id: 'devops-1-3', title: 'Infrastructure as Code (IaC)', prompt: 'What is Infrastructure as Code (IaC)? Explain the benefits of managing infrastructure through code using tools like Terraform or CloudFormation.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 2: CI/CD Pipeline',
+                lessons: [
+                    { id: 'devops-2-1', title: 'Continuous Integration (CI)', prompt: 'What is Continuous Integration? Explain the importance of merging code frequently and running automated builds and tests.', completed: false },
+                    { id: 'devops-2-2', title: 'Continuous Delivery/Deployment', prompt: 'What is the difference between Continuous Delivery and Continuous Deployment (CD)?', completed: false },
+                    { id: 'devops-2-3', title: 'Intro to GitHub Actions', prompt: 'Explain what GitHub Actions is and how it can be used to automate workflows. Describe the basic components like workflows, jobs, steps, and actions.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 3: Containerization with Docker',
+                lessons: [
+                    { id: 'devops-3-1', title: 'What is a Container?', prompt: 'Explain what a container is and how it differs from a Virtual Machine (VM). What problems does containerization solve?', completed: false },
+                    { id: 'devops-3-2', title: 'Writing a Dockerfile', prompt: 'Guide me through writing a simple Dockerfile for a Node.js application. Explain common instructions like `FROM`, `WORKDIR`, `COPY`, `RUN`, and `CMD`.', completed: false },
+                    { id: 'devops-3-3', title: 'Building & Running Containers', prompt: 'Show me the basic Docker commands: `docker build` to create an image from a Dockerfile and `docker run` to start a container from an image.', completed: false },
+                    { id: 'devops-3-4', title: 'What is Docker Compose?', prompt: 'Explain what Docker Compose is and how it is used to define and run multi-container Docker applications.', completed: false },
+                ]
+            },
+            {
+                title: 'Module 4: Monitoring & Observability',
+                lessons: [
+                    { id: 'devops-4-1', title: 'Intro to Monitoring', prompt: 'Why is monitoring important in DevOps? What are the key things we should monitor in an application?', completed: false },
+                    { id: 'devops-4-2', title: 'Logging, Metrics, Tracing', prompt: 'Explain the three pillars of observability: logs, metrics, and traces. What is the difference between them?', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Build a CI Pipeline',
+                project: {
+                    id: 'proj-devops-ci',
+                    title: 'Project: Build a CI Pipeline',
+                    description: 'Create a simple CI pipeline for a Node.js application using GitHub Actions.',
+                    steps: [
+                        { id: 'proj-devops-ci-1', title: 'Step 1: Simple Node.js App', prompt: 'Provide me with a very simple Node.js Express application that has one endpoint and one simple unit test with Jest.', completed: false },
+                        { id: 'proj-devops-ci-2', title: 'Step 2: Create a GitHub Workflow', prompt: 'Guide me to create the directory structure and a YAML file for a new GitHub Actions workflow.', completed: false },
+                        { id: 'proj-devops-ci-3', title: 'Step 3: Configure the Workflow', prompt: 'Help me configure the workflow to trigger on a `push` to the main branch. It should check out the code and set up a Node.js environment.', completed: false },
+                        { id: 'proj-devops-ci-4', title: 'Step 4: Run Tests Automatically', prompt: 'Teach me how to add steps to the workflow to install dependencies (`npm install`) and run the unit tests (`npm test`).', completed: false },
+                        { id: 'proj-devops-ci-5', title: 'Step 5: Add a Linter Step', prompt: 'Let\'s improve the pipeline. Guide me to add a step that runs a linter (like ESLint) to check the code for style issues before running the tests.', completed: false },
+                    ]
+                }
+            }
+        ]
+    },
+    'dsa-basics': {
+        id: 'dsa-basics',
+        title: 'Data Structures & Algorithms 101',
+        modules: [
+            {
+                title: 'Module 1: Introduction & Big O',
+                lessons: [
+                    { id: 'dsa-1-1', title: 'What are DSA?', prompt: 'Explain what Data Structures and Algorithms are and why they are fundamental to computer science. Use a real-world analogy.', completed: false },
+                    { id: 'dsa-1-2', title: 'Time & Space Complexity', prompt: 'Introduce the concepts of Time Complexity (how long an algorithm takes) and Space Complexity (how much memory it uses).', completed: false },
+                    { id: 'dsa-1-3', title: 'Big O Notation', prompt: 'Explain Big O notation with simple examples for O(1), O(n), O(n^2), and O(log n). Why is it important?', completed: false },
+                ],
+            },
+            {
+                title: 'Module 2: Core Data Structures',
+                lessons: [
+                    { id: 'dsa-2-1', title: 'Arrays & Lists', prompt: 'Explain the Array/List data structure. What are its common operations (access, search, insert, delete) and their Big O complexities?', completed: false },
+                    { id: 'dsa-2-2', title: 'Stacks & Queues', prompt: 'Explain Stacks (LIFO) and Queues (FIFO). Use real-world analogies like a stack of plates and a checkout line.', completed: false },
+                    { id: 'dsa-2-3', title: 'Hash Tables', prompt: 'What is a Hash Table (or Dictionary/Map)? How does it achieve fast lookups? Explain hash functions and collisions at a high level.', completed: false },
+                    { id: 'dsa-2-4', title: 'Linked Lists', prompt: 'Explain the Linked List data structure. How does it differ from an array? Cover singly vs. doubly linked lists.', completed: false },
+                    { id: 'dsa-2-5', title: 'Trees', prompt: 'Introduce the Tree data structure. Explain basic concepts like root, parent, child, and leaf. Briefly describe what a Binary Search Tree (BST) is.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 3: Common Algorithms',
+                lessons: [
+                    { id: 'dsa-3-1', title: 'Linear Search', prompt: 'Explain the Linear Search algorithm. What is its Big O time complexity and when is it useful?', completed: false },
+                    { id: 'dsa-3-2', title: 'Binary Search', prompt: 'Explain the Binary Search algorithm. What is the key prerequisite for it to work? What is its Big O time complexity?', completed: false },
+                    { id: 'dsa-3-3', title: 'Bubble Sort', prompt: 'Explain the Bubble Sort algorithm. Walk through a small example and explain its O(n^2) complexity.', completed: false },
+                    { id: 'dsa-3-4', title: 'Merge Sort', prompt: 'Explain the Merge Sort algorithm using the "divide and conquer" strategy. What is its Big O time complexity?', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Implement a Queue',
+                project: {
+                    id: 'proj-dsa-queue',
+                    title: 'Project: Implement a Queue',
+                    description: 'Implement the Queue data structure from scratch using a language of your choice.',
+                    steps: [
+                        { id: 'proj-dsa-q-1', title: 'Step 1: Choose a Language & Setup', prompt: 'Let\'s implement a Queue. Guide me to set up a class or struct for our Queue in either JavaScript or Python.', completed: false },
+                        { id: 'proj-dsa-q-2', title: 'Step 2: The `enqueue` Method', prompt: 'Help me implement the `enqueue` method, which adds an element to the back of the queue. We can use an array/list as the underlying structure.', completed: false },
+                        { id: 'proj-dsa-q-3', title: 'Step 3: The `dequeue` Method', prompt: 'Now, guide me to implement the `dequeue` method, which removes and returns the element from the front of the queue.', completed: false },
+                        { id: 'proj-dsa-q-4', title: 'Step 4: Helper Methods', prompt: 'Let\'s add some helper methods. Guide me to implement `peek` (to see the front element without removing it) and `isEmpty`.', completed: false },
+                        { id: 'proj-dsa-q-5', title: 'Step 5: Test the Queue', prompt: 'Help me write some simple code to test our Queue implementation by adding and removing a few items and checking the results.', completed: false },
                     ]
                 }
             }

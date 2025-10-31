@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -68,7 +65,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMobileView, setActiveMobileView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: The getInitialState function requires a `pathId` argument to determine which learning path to load.
+  // Fix: The getInitialState function requires a `pathId` argument to determine which learning path to load.
   // It was being called without an argument, causing a "Expected 1 arguments, but got 0" error.
   // Passing 'js-basics' as a default ensures the application initializes correctly.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
