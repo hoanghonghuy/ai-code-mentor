@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
+import CodeEditor from './components/CodeEditor';
 import Notification from './components/Notification';
-import { NoteIcon, PlayIcon, CodeIcon, ChatBubbleIcon } from './components/icons';
+import { NoteIcon, PlayIcon, CodeIcon, ChatBubbleIcon, FilesIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
 import NewProjectModal from './components/NewProjectModal';
@@ -29,7 +30,24 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
 
 const getInitialLearningPath = (pathId: LearningPathId): LearningPath => JSON.parse(JSON.stringify(learningPaths[pathId]));
 
-const getInitialState = (pathId: LearningPathId) => {
+const defaultProjectFiles: FileSystemNode[] = [
+    { id: 'file-1', name: 'index.html', type: 'file', content: `<!DOCTYPE html>
+<html>
+<head>
+    <title>My Project</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Hello, World!</h1>
+    <script src="script.js"></script>
+</body>
+</html>`, parentId: null },
+    { id: 'file-2', name: 'style.css', type: 'file', content: `body {\n    font-family: sans-serif;\n}`, parentId: null },
+    { id: 'file-3', name: 'script.js', type: 'file', content: `console.log('Hello from script.js!');`, parentId: null },
+];
+
+
+const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> => {
   const path = getInitialLearningPath(pathId);
   return {
     activePathId: pathId,
@@ -44,6 +62,9 @@ const getInitialState = (pathId: LearningPathId) => {
     bookmarkedLessonIds: [],
     customDocs: ['https://react.dev', 'https://developer.mozilla.org/'],
     aiLanguage: 'en',
+    projectFiles: JSON.parse(JSON.stringify(defaultProjectFiles)),
+    openFileIds: ['file-1', 'file-3'],
+    activeFileId: 'file-3',
   };
 };
 
@@ -65,8 +86,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // Fix: The getInitialState function was called without the required 'pathId' argument.
-  // Provided 'js-basics' as a default argument to correctly initialize the application state.
+  // FIX: The getInitialState function was called without the required 'pathId' argument. Provided 'js-basics' as a default argument to correctly initialize the application state.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -82,6 +102,7 @@ const App: React.FC = () => {
   const [projectToEdit, setProjectToEdit] = useState<CustomProject | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
   const [historyToClear, setHistoryToClear] = useState<{ view: 'learningPath' | 'customProject', id: string } | null>(null);
+  const [nodeToDelete, setNodeToDelete] = useState<FileSystemNode | null>(null);
 
   // Undo/Redo state - session only, not persisted
   const [chatHistory, setChatHistory] = useState<{ [key: string]: { past: ChatMessage[][], future: ChatMessage[][] } }>({});
@@ -95,8 +116,15 @@ const App: React.FC = () => {
   const [notes, setNotes] = useState<{ [key: string]: string }>(initialState.notes);
   const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>(initialState.bookmarkedLessonIds);
   const [customDocs, setCustomDocs] = useState<string[]>(initialState.customDocs);
-  const [activeRightTab, setActiveRightTab] = useState<'playground' | 'notes'>('playground');
+  const [activeRightTab, setActiveRightTab] = useState<'codeEditor' | 'playground' | 'notes'>('codeEditor');
   
+  // Code Editor State
+  const [projectFiles, setProjectFiles] = useState<FileSystemNode[]>(initialState.projectFiles);
+  const [openFileIds, setOpenFileIds] = useState<string[]>(initialState.openFileIds);
+  const [activeFileId, setActiveFileId] = useState<string | null>(initialState.activeFileId);
+  const [projectOutput, setProjectOutput] = useState('');
+  const [isProjectRunning, setIsProjectRunning] = useState(false);
+
   // Settings State
   const [aiLanguage, setAiLanguage] = useState(initialState.aiLanguage);
 
@@ -154,6 +182,9 @@ const App: React.FC = () => {
       setNotes(freshState.notes);
       setBookmarkedLessonIds(freshState.bookmarkedLessonIds);
       setAiLanguage(freshState.aiLanguage);
+      setProjectFiles(freshState.projectFiles);
+      setOpenFileIds(freshState.openFileIds);
+      setActiveFileId(freshState.activeFileId);
       setMessages([]);
       setActiveView('learningPath');
       setChatHistory({});
@@ -169,8 +200,9 @@ const App: React.FC = () => {
             
             if (userDocSnap.exists()) {
                 const data = userDocSnap.data() as UserData;
-                setActivePathId(data.activePathId || 'js-basics');
-                setLearningPath(data.learningPath || getInitialLearningPath(data.activePathId || 'js-basics'));
+                const freshState = getInitialState(data.activePathId || 'js-basics');
+                setActivePathId(data.activePathId || freshState.activePathId);
+                setLearningPath(data.learningPath || freshState.learningPath);
                 setActiveLessonId(data.activeLessonId || null);
                 setLearningPathHistories(data.learningPathHistories || {});
                 setCustomProjects(data.customProjects || []);
@@ -179,8 +211,11 @@ const App: React.FC = () => {
                 setAchievements(data.achievements || getInitialAchievements(data.learningPath.title));
                 setNotes(data.notes || {});
                 setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
-                setCustomDocs(data.customDocs || ['https://react.dev', 'https://developer.mozilla.org/']);
-                setAiLanguage(data.aiLanguage || 'en');
+                setCustomDocs(data.customDocs || freshState.customDocs);
+                setAiLanguage(data.aiLanguage || freshState.aiLanguage);
+                setProjectFiles(data.projectFiles || freshState.projectFiles);
+                setOpenFileIds(data.openFileIds || freshState.openFileIds);
+                setActiveFileId(data.activeFileId || freshState.activeFileId);
             } else {
                 resetStateForGuest();
             }
@@ -192,8 +227,9 @@ const App: React.FC = () => {
             if(guestDataJson) {
                 try {
                     const data = JSON.parse(guestDataJson) as UserData;
-                     setActivePathId(data.activePathId || 'js-basics');
-                     setLearningPath(data.learningPath || getInitialLearningPath(data.activePathId || 'js-basics'));
+                     const freshState = getInitialState(data.activePathId || 'js-basics');
+                     setActivePathId(data.activePathId || freshState.activePathId);
+                     setLearningPath(data.learningPath || freshState.learningPath);
                      setActiveLessonId(data.activeLessonId || null);
                      setLearningPathHistories(data.learningPathHistories || {});
                      setCustomProjects(data.customProjects || []);
@@ -202,8 +238,11 @@ const App: React.FC = () => {
                      setAchievements(data.achievements?.length ? data.achievements : getInitialAchievements(data.learningPath.title));
                      setNotes(data.notes || {});
                      setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
-                     setCustomDocs(data.customDocs || ['https://react.dev', 'https://developer.mozilla.org/']);
-                     setAiLanguage(data.aiLanguage || 'en');
+                     setCustomDocs(data.customDocs || freshState.customDocs);
+                     setAiLanguage(data.aiLanguage || freshState.aiLanguage);
+                     setProjectFiles(data.projectFiles || freshState.projectFiles);
+                     setOpenFileIds(data.openFileIds || freshState.openFileIds);
+                     setActiveFileId(data.activeFileId || freshState.activeFileId);
                 } catch (error) {
                     console.error("Failed to parse guest data from localStorage", error);
                     resetStateForGuest();
@@ -235,6 +274,9 @@ const App: React.FC = () => {
         bookmarkedLessonIds,
         customDocs,
         aiLanguage,
+        projectFiles,
+        openFileIds,
+        activeFileId,
     };
 
     const saveData = () => {
@@ -261,7 +303,8 @@ const App: React.FC = () => {
     user, authLoading,
     activePathId, learningPath, activeLessonId, learningPathHistories,
     customProjects, activeCustomProjectId, points, achievements,
-    notes, bookmarkedLessonIds, customDocs, aiLanguage
+    notes, bookmarkedLessonIds, customDocs, aiLanguage,
+    projectFiles, openFileIds, activeFileId
   ]);
 
   const handleLogin = async () => {
@@ -405,6 +448,223 @@ const App: React.FC = () => {
         return newPath;
     });
   }, []);
+
+  // START: Code Editor Handlers
+  const handleOpenFile = useCallback((fileId: string) => {
+    setOpenFileIds(prev => prev.includes(fileId) ? prev : [...prev, fileId]);
+    setActiveFileId(fileId);
+  }, []);
+
+  const handleCloseFile = useCallback((fileIdToClose: string) => {
+    const fileIndex = openFileIds.indexOf(fileIdToClose);
+    if (fileIndex === -1) return;
+
+    const newOpenFileIds = openFileIds.filter(id => id !== fileIdToClose);
+    setOpenFileIds(newOpenFileIds);
+    
+    if (activeFileId === fileIdToClose) {
+      if (newOpenFileIds.length > 0) {
+        // Activate the previous tab, or the next one if it was the first
+        const newActiveIndex = Math.max(0, fileIndex - 1);
+        setActiveFileId(newOpenFileIds[newActiveIndex]);
+      } else {
+        setActiveFileId(null);
+      }
+    }
+  }, [openFileIds, activeFileId]);
+
+  const handleUpdateFileContent = useCallback((fileId: string, newContent: string) => {
+      const updateNode = (nodes: FileSystemNode[]): FileSystemNode[] => {
+          return nodes.map(node => {
+              if (node.id === fileId && node.type === 'file') {
+                  return { ...node, content: newContent };
+              }
+              if (node.type === 'folder') {
+                  return { ...node, children: updateNode(node.children) };
+              }
+              return node;
+          });
+      };
+      setProjectFiles(prev => updateNode(prev));
+  }, []);
+
+  const getUniqueName = (nodes: FileSystemNode[], baseName: string, isFolder: boolean, parentId: string | null): string => {
+      const siblingNodes = parentId 
+          ? (findNodeAndParent(nodes, parentId)?.node as ProjectFolder)?.children || [] 
+          : nodes;
+  
+      const existingNames = new Set(siblingNodes.map(n => n.name));
+  
+      let finalName = baseName;
+      let counter = 1;
+      const extension = isFolder ? '' : baseName.includes('.') ? `.${baseName.split('.').pop()}` : '';
+      const nameWithoutExt = isFolder ? baseName : baseName.includes('.') ? baseName.slice(0, baseName.lastIndexOf('.')) : baseName;
+  
+      while (existingNames.has(finalName)) {
+          finalName = `${nameWithoutExt} ${counter}${extension}`;
+          counter++;
+      }
+      return finalName;
+  };
+  
+  const findNodeAndParent = (nodes: FileSystemNode[], nodeId: string, parent: ProjectFolder | null = null): { node: FileSystemNode, parent: ProjectFolder | null } | null => {
+      for (const node of nodes) {
+          if (node.id === nodeId) {
+              return { node, parent };
+          }
+          if (node.type === 'folder') {
+              const found = findNodeAndParent(node.children, nodeId, node);
+              if (found) return found;
+          }
+      }
+      return null;
+  };
+  
+  const addNodeToParent = (nodes: FileSystemNode[], parentId: string | null, newNode: FileSystemNode): FileSystemNode[] => {
+      if (parentId === null) {
+          return [...nodes, newNode];
+      }
+      return nodes.map(node => {
+          if (node.id === parentId && node.type === 'folder') {
+              return { ...node, children: [...node.children, newNode], isOpen: true }; 
+          }
+          if (node.type === 'folder') {
+              return { ...node, children: addNodeToParent(node.children, parentId, newNode) };
+          }
+          return node;
+      });
+  };
+
+  const handleCreateFile = useCallback((parentId: string | null) => {
+    const newName = getUniqueName(projectFiles, 'untitled.txt', false, parentId);
+    const newFile: ProjectFile = {
+      id: `file-${Date.now()}`,
+      name: newName,
+      type: 'file',
+      content: '',
+      parentId,
+    };
+    setProjectFiles(prev => addNodeToParent(prev, parentId, newFile));
+    handleOpenFile(newFile.id);
+  }, [projectFiles, handleOpenFile]);
+
+  const handleCreateFolder = useCallback((parentId: string | null) => {
+    const newName = getUniqueName(projectFiles, 'New Folder', true, parentId);
+    const newFolder: ProjectFolder = {
+      id: `folder-${Date.now()}`,
+      name: newName,
+      type: 'folder',
+      children: [],
+      isOpen: true,
+      parentId,
+    };
+    setProjectFiles(prev => addNodeToParent(prev, parentId, newFolder));
+  }, [projectFiles]);
+
+  const renameNodeRecursive = (nodes: FileSystemNode[], nodeId: string, newName: string): FileSystemNode[] => {
+      return nodes.map(node => {
+          if (node.id === nodeId) {
+              return { ...node, name: newName };
+          }
+          if (node.type === 'folder') {
+              return { ...node, children: renameNodeRecursive(node.children, nodeId, newName) };
+          }
+          return node;
+      });
+  };
+
+  const handleRenameNode = useCallback((nodeId: string, newName: string) => {
+      setProjectFiles(prev => renameNodeRecursive(prev, nodeId, newName));
+  }, []);
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+      const findResult = findNodeAndParent(projectFiles, nodeId);
+      if (findResult) {
+          setNodeToDelete(findResult.node);
+      }
+  }, [projectFiles]);
+
+  const handleConfirmDeleteNode = useCallback(() => {
+    if (!nodeToDelete) return;
+
+    const deleteNodeRecursive = (nodes: FileSystemNode[], nodeId: string): { newNodes: FileSystemNode[], deletedFileIds: string[] } => {
+        let deletedFileIds: string[] = [];
+        const newNodes = nodes.filter(node => {
+            if (node.id === nodeId) {
+                const collectIds = (n: FileSystemNode) => {
+                    if (n.type === 'file') {
+                        deletedFileIds.push(n.id);
+                    } else { // folder
+                        n.children.forEach(collectIds);
+                    }
+                };
+                collectIds(node);
+                return false; // filter it out
+            }
+            return true;
+        }).map(node => {
+            if (node.type === 'folder') {
+                const result = deleteNodeRecursive(node.children, nodeId);
+                node.children = result.newNodes;
+                deletedFileIds = [...deletedFileIds, ...result.deletedFileIds];
+            }
+            return node;
+        });
+        return { newNodes, deletedFileIds };
+    };
+
+    const { newNodes, deletedFileIds } = deleteNodeRecursive(JSON.parse(JSON.stringify(projectFiles)), nodeToDelete.id);
+
+    setProjectFiles(newNodes);
+
+    const newOpenFileIds = openFileIds.filter(id => !deletedFileIds.includes(id));
+    setOpenFileIds(newOpenFileIds);
+    if (activeFileId && deletedFileIds.includes(activeFileId)) {
+        setActiveFileId(newOpenFileIds.length > 0 ? newOpenFileIds[0] : null);
+    }
+
+    setNodeToDelete(null);
+  }, [nodeToDelete, projectFiles, openFileIds, activeFileId]);
+  
+  const serializeProject = (nodes: FileSystemNode[], indent = ''): string => {
+    return nodes.map(node => {
+        if (node.type === 'file') {
+            return `${indent}# File: ${node.name}\n${indent}\`\`\`\n${node.content}\n${indent}\`\`\`\n`;
+        } else { // folder
+            return `${indent}# Folder: ${node.name}\n${serializeProject(node.children, indent + '  ')}`;
+        }
+    }).join('\n');
+  };
+
+  const handleRunProject = useCallback(async () => {
+    if (!ai) {
+        setProjectOutput("Error: Gemini AI not initialized. Check API Key.");
+        return;
+    };
+
+    setIsProjectRunning(true);
+    setProjectOutput(t('playground.executing'));
+    
+    const projectStructure = serializeProject(projectFiles);
+    const prompt = `Analyze the following project structure and files. Provide a simulated output as if it were running in a browser or console. Explain what the project does and how the files interact.
+
+Project Files:
+${projectStructure}`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+      });
+      setProjectOutput(response.text.trim());
+    } catch (error) {
+      console.error('Error executing project:', error);
+      setProjectOutput('An unexpected error occurred while running the project.');
+    } finally {
+      setIsProjectRunning(false);
+    }
+  }, [ai, projectFiles, t]);
+  // END: Code Editor Handlers
 
   const handleSendMessage = useCallback(async (
     message: string,
@@ -895,6 +1155,12 @@ const App: React.FC = () => {
               <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 mb-2">
                 <div className="flex items-center">
                   <button 
+                    onClick={() => setActiveRightTab('codeEditor')}
+                    className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'codeEditor' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    <FilesIcon className="w-5 h-5"/> {t('tabs.codeEditor')}
+                  </button>
+                  <button 
                     onClick={() => setActiveRightTab('playground')}
                     className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'playground' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
@@ -909,6 +1175,24 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex-1 min-h-0">
+                {activeRightTab === 'codeEditor' && (
+                  <CodeEditor 
+                    files={projectFiles}
+                    openFileIds={openFileIds}
+                    activeFileId={activeFileId}
+                    onOpenFile={handleOpenFile}
+                    onCloseFile={handleCloseFile}
+                    onSetActiveFile={setActiveFileId}
+                    onUpdateFileContent={handleUpdateFileContent}
+                    onRunProject={handleRunProject}
+                    isRunning={isProjectRunning}
+                    output={projectOutput}
+                    onCreateFile={handleCreateFile}
+                    onCreateFolder={handleCreateFolder}
+                    onRenameNode={handleRenameNode}
+                    onDeleteNode={handleDeleteNode}
+                  />
+                )}
                 {activeRightTab === 'playground' && <CodePlayground onFirstRun={handleFirstCodeRun} />}
                 {activeRightTab === 'notes' && (
                   <NotesPanel 
@@ -950,6 +1234,15 @@ const App: React.FC = () => {
             onConfirm={handleConfirmClearHistory}
             onClose={() => setHistoryToClear(null)}
             confirmText={t('clearHistoryModal.confirm')}
+        />
+      )}
+      {nodeToDelete && (
+        <ConfirmationModal
+            title={t('deleteNodeModal.title')}
+            message={nodeToDelete.type === 'folder' ? t('deleteNodeModal.messageFolder', { nodeName: nodeToDelete.name }) : t('deleteNodeModal.messageFile', { nodeName: nodeToDelete.name })}
+            onConfirm={handleConfirmDeleteNode}
+            onClose={() => setNodeToDelete(null)}
+            confirmText={t('deleteNodeModal.confirm')}
         />
       )}
     </div>

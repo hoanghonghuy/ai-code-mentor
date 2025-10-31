@@ -107,11 +107,18 @@
     "message": "Are you sure you want to clear the entire chat history for this session? This action cannot be undone.",
     "confirm": "Clear History"
   },
+  "deleteNodeModal": {
+    "title": "Delete Item",
+    "messageFile": "Are you sure you want to permanently delete the file \"{{nodeName}}\"?",
+    "messageFolder": "Are you sure you want to permanently delete the folder \"{{nodeName}}\" and all of its contents? This action cannot be undone.",
+    "confirm": "Delete"
+  },
   "tabs": {
     "playground": "Playground",
     "notes": "Notes",
     "chat": "Chat",
-    "tools": "Tools"
+    "tools": "Tools",
+    "codeEditor": "Code Editor"
   },
   "priority": {
     "high": "High",
@@ -119,5 +126,16 @@
     "low": "Low",
     "none": "None",
     "set": "Set priority"
+  },
+  "codeEditor": {
+    "runProject": "Run Project",
+    "runningProject": "Running...",
+    "output": "Output",
+    "selectFile": "Select a file to start editing.",
+    "emptyProject": "Your project is empty. Create a file or folder to begin.",
+    "newFile": "New File",
+    "newFolder": "New Folder",
+    "rename": "Rename",
+    "delete": "Delete"
   }
 }

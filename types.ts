@@ -81,6 +81,26 @@ export interface AppContextType {
   chat: Chat | null;
 }
 
+export type FileSystemNode = ProjectFile | ProjectFolder;
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  content: string;
+  type: 'file';
+  parentId?: string | null;
+}
+
+export interface ProjectFolder {
+  id: string;
+  name: string;
+  children: FileSystemNode[];
+  type: 'folder';
+  isOpen?: boolean; // For UI state
+  parentId?: string | null;
+}
+
+
 export interface UserData {
   learningPath: LearningPath;
   activeLessonId: string | null;
@@ -95,4 +115,7 @@ export interface UserData {
   activePathId: LearningPathId;
   aiLanguage?: string;
   lastSaved?: any;
+  projectFiles: FileSystemNode[];
+  openFileIds: string[];
+  activeFileId: string | null;
 }

@@ -107,11 +107,18 @@
     "message": "Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện cho phiên này không? Hành động này không thể hoàn tác.",
     "confirm": "Xóa Lịch sử"
   },
+  "deleteNodeModal": {
+    "title": "Xóa mục",
+    "messageFile": "Bạn có chắc chắn muốn xóa vĩnh viễn tệp \"{{nodeName}}\" không?",
+    "messageFolder": "Bạn có chắc chắn muốn xóa vĩnh viễn thư mục \"{{nodeName}}\" và tất cả nội dung của nó không? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa"
+  },
   "tabs": {
     "playground": "Sân chơi",
     "notes": "Ghi chú",
     "chat": "Trò chuyện",
-    "tools": "Công cụ"
+    "tools": "Công cụ",
+    "codeEditor": "Trình sửa mã"
   },
   "priority": {
     "high": "Cao",
@@ -119,5 +126,16 @@
     "low": "Thấp",
     "none": "Không",
     "set": "Đặt ưu tiên"
+  },
+  "codeEditor": {
+    "runProject": "Chạy dự án",
+    "runningProject": "Đang chạy...",
+    "output": "Đầu ra",
+    "selectFile": "Chọn một tệp để bắt đầu chỉnh sửa.",
+    "emptyProject": "Dự án của bạn trống. Tạo một tệp hoặc thư mục để bắt đầu.",
+    "newFile": "Tệp mới",
+    "newFolder": "Thư mục mới",
+    "rename": "Đổi tên",
+    "delete": "Xóa"
   }
 }
