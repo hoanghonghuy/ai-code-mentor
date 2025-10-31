@@ -95,10 +95,17 @@ const App: React.FC = () => {
   const hasLoadedData = useRef(false);
 
   useEffect(() => {
+    const lightTheme = document.getElementById('light-hljs-theme') as HTMLLinkElement | null;
+    const darkTheme = document.getElementById('dark-hljs-theme') as HTMLLinkElement | null;
+
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
+      if (lightTheme) lightTheme.disabled = true;
+      if (darkTheme) darkTheme.disabled = false;
     } else {
       document.documentElement.classList.remove('dark');
+      if (lightTheme) lightTheme.disabled = false;
+      if (darkTheme) darkTheme.disabled = true;
     }
   }, [theme]);
   

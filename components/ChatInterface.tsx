@@ -22,22 +22,22 @@ const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; 
     }, [code, lang]);
 
     return (
-        <div className="relative group my-2 bg-[#282c34] rounded-md overflow-hidden text-sm">
-            <div className="flex items-center justify-between bg-gray-900/50 px-3 py-1.5 border-b border-gray-700/50">
-                <span className="text-xs font-sans text-gray-400">{lang}</span>
+        <div className="relative group my-2 bg-gray-100 dark:bg-[#282c34] rounded-md overflow-hidden text-sm border border-gray-200 dark:border-gray-700/50">
+            <div className="flex items-center justify-between bg-gray-200 dark:bg-gray-900/50 px-3 py-1.5 border-b border-gray-300 dark:border-gray-700/50">
+                <span className="text-xs font-sans text-gray-600 dark:text-gray-400">{lang}</span>
                 <button
                     onClick={onCopy}
-                    className="p-1 rounded-md text-gray-400 hover:bg-gray-600 hover:text-gray-200 transition-colors"
+                    className="p-1 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
                     aria-label="Copy code"
                 >
                     {copied ? (
-                        <CheckIcon className="w-4 h-4 text-green-400" />
+                        <CheckIcon className="w-4 h-4 text-green-500" />
                     ) : (
                         <CopyIcon className="w-4 h-4" />
                     )}
                 </button>
             </div>
-            <pre className="m-0">
+            <pre className="m-0 p-4 overflow-x-auto">
                 <code ref={codeRef} className={`language-${lang}`}>
                     {code}
                 </code>

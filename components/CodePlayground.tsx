@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
@@ -88,8 +89,8 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-2.5-dark:border-gray-700 shadow-sm">
-      <div className="flex justify-between items-center p-4 border-b border-gray-2.5-dark:border-gray-700">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold">Code Playground</h2>
             <select
@@ -123,7 +124,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
                 spellCheck="false"
             />
         </div>
-        <div className="h-48 border-t border-gray-2.5-dark:border-gray-700">
+        <div className="h-48 border-t border-gray-200 dark:border-gray-700">
             <div className="p-4 bg-gray-100 dark:bg-black/20 h-full">
                 <h3 className="text-sm font-semibold mb-2">Output:</h3>
                 <pre className="text-sm whitespace-pre-wrap font-mono h-full overflow-y-auto">{output}</pre>
