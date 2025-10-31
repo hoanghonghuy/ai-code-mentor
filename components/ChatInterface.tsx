@@ -87,39 +87,105 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
         );
     };
 
-  // 1. Helper to parse inline elements: **bold**, *italic*, `code`
   const parseInline = (line: string): React.ReactNode => {
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
-    // Regex to find bold (**text** or __text__), italic (*text* or _text_), or inline code (`code`)
     const regex = /(\*\*|__)(.*?)\1|(\*|_)(.*?)\3|(`)(.*?)\5/g;
     let match;
 
     while ((match = regex.exec(line)) !== null) {
-      // Add preceding text
       if (match.index > lastIndex) {
         elements.push(highlightText(line.substring(lastIndex, match.index)));
       }
-      // Add the matched element
-      if (match[2] !== undefined) { // Bold
+      if (match[2] !== undefined) {
         elements.push(<strong key={match.index}>{highlightText(match[2])}</strong>);
-      } else if (match[4] !== undefined) { // Italic
+      } else if (match[4] !== undefined) {
         elements.push(<em key={match.index}>{highlightText(match[4])}</em>);
-      } else if (match[6] !== undefined) { // Code - no highlight
+      } else if (match[6] !== undefined) {
         elements.push(<code key={match.index} className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded-md font-mono text-sm">{match[6]}</code>);
       }
       lastIndex = regex.lastIndex;
     }
 
-    // Add remaining text
     if (lastIndex < line.length) {
       elements.push(highlightText(line.substring(lastIndex)));
     }
 
     return <>{elements}</>;
   };
+  
+  const renderTextBlock = (block: string, blockIndex: number) => {
+    const elements: React.ReactNode[] = [];
+    const lines = block.trim().split('\n');
+    let i = 0;
 
-  // 2. Split text by code blocks to isolate them
+    while (i < lines.length) {
+      const line = lines[i];
+
+      const headingMatch = line.match(/^(#{1,6})\s(.*)/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        // FIX: Dynamically create heading tags using React.createElement
+        // to avoid JSX namespace and component casing issues.
+        const tag = `h${level}`;
+        elements.push(React.createElement(tag, { key: `${blockIndex}-${i}`, className: "my-2 font-bold" }, parseInline(headingMatch[2])));
+        i++;
+        continue;
+      }
+
+      if (line.match(/^(---|___|\*\*\*)$/)) {
+        elements.push(<hr key={`${blockIndex}-${i}`} className="my-4 border-gray-300 dark:border-gray-600" />);
+        i++;
+        continue;
+      }
+
+      if (line.startsWith('> ')) {
+        const quoteLines: string[] = [];
+        while (i < lines.length && lines[i].startsWith('> ')) {
+          quoteLines.push(lines[i].substring(2));
+          i++;
+        }
+        elements.push(<blockquote key={`${blockIndex}-${i}-bq`} className="pl-4 border-l-4 border-gray-300 dark:border-gray-600 my-2 italic text-gray-600 dark:text-gray-400">{renderTextBlock(quoteLines.join('\n'), i)}</blockquote>);
+        continue;
+      }
+
+      if (line.match(/^(\*|-)\s/)) {
+        const listItems: React.ReactNode[] = [];
+        while (i < lines.length && lines[i].match(/^(\*|-)\s/)) {
+          listItems.push(<li key={`${blockIndex}-${i}`}>{parseInline(lines[i].replace(/^(\*|-)\s/, ''))}</li>);
+          i++;
+        }
+        elements.push(<ul key={`${blockIndex}-${i}-ul`} className="list-disc pl-5 my-2 space-y-1">{listItems}</ul>);
+        continue;
+      }
+
+      if (line.match(/^\d+\.\s/)) {
+        const listItems: React.ReactNode[] = [];
+        while (i < lines.length && lines[i].match(/^\d+\.\s/)) {
+          listItems.push(<li key={`${blockIndex}-${i}`}>{parseInline(lines[i].replace(/^\d+\.\s/, ''))}</li>);
+          i++;
+        }
+        elements.push(<ol key={`${blockIndex}-${i}-ol`} className="list-decimal pl-5 my-2 space-y-1">{listItems}</ol>);
+        continue;
+      }
+
+      const paraLines: string[] = [];
+      while (i < lines.length && lines[i].trim() !== '') {
+        if (lines[i].match(/^(#|>|(\*|-)\s|\d+\.\s|---|___|\*\*\*|```)/)) break;
+        paraLines.push(lines[i]);
+        i++;
+      }
+      if (paraLines.length > 0) {
+        elements.push(<p key={`${blockIndex}-${i}-p`} className="my-2">{parseInline(paraLines.join(' '))}</p>);
+      }
+      
+      while (i < lines.length && lines[i].trim() === '') {
+        i++;
+      }
+    }
+    return elements;
+  };
+
   const blocks = text.split(/(```[\s\S]*?```)/g);
 
   return (
@@ -127,7 +193,6 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
       {blocks.map((block, index) => {
         if (!block) return null;
 
-        // 3. Render code blocks
         if (block.startsWith('```')) {
           const langMatch = block.match(/^```(\w+)?\n?/);
           const lang = langMatch ? langMatch[1] : '';
@@ -143,40 +208,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
           );
         }
 
-        // 4. Process and render text blocks, splitting by paragraphs
-        const paragraphs = block.trim().split(/\n{2,}/g);
-        return paragraphs.map((para, paraIndex) => {
-          if (!para.trim()) return null;
-
-          const key = `${index}-${paraIndex}`;
-          // 5. Check for lists
-          const lines = para.split('\n');
-          const isUnorderedList = lines.length > 0 && lines.every(line => line.trim().startsWith('* ') || line.trim().startsWith('- '));
-          const isOrderedList = lines.length > 0 && lines.every(line => /^\d+\.\s/.test(line.trim()));
-
-          if (isUnorderedList) {
-            return (
-              <ul key={key} className="list-disc pl-5 my-2 space-y-1">
-                {lines.map((item, i) => (
-                  <li key={i}>{parseInline(item.replace(/^(\*|-)\s/, ''))}</li>
-                ))}
-              </ul>
-            );
-          }
-
-          if (isOrderedList) {
-            return (
-              <ol key={key} className="list-decimal pl-5 my-2 space-y-1">
-                {lines.map((item, i) => (
-                  <li key={i}>{parseInline(item.replace(/^\d+\.\s/, ''))}</li>
-                ))}
-              </ol>
-            );
-          }
-
-          // 6. Render as a paragraph
-          return <p key={key} className="my-2">{parseInline(para)}</p>;
-        });
+        return renderTextBlock(block, index);
       })}
     </div>
   );

@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XIcon } from './icons';
 import { useTranslation } from 'react-i18next';
+import { CustomProject } from '../types';
 
 interface NewProjectModalProps {
   onClose: () => void;
-  onCreateProject: (name: string, goal: string) => void;
+  onSave: (data: { name: string, goal: string, id?: string }) => void;
+  initialData?: CustomProject | null;
 }
 
-const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onCreateProject }) => {
+const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onSave, initialData }) => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
 
+  const isEditing = !!initialData;
+
+  useEffect(() => {
+    if (isEditing) {
+      setName(initialData.name);
+      setGoal(initialData.goal);
+    }
+  }, [initialData, isEditing]);
+
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && goal.trim()) {
-      onCreateProject(name.trim(), goal.trim());
+      onSave({ name: name.trim(), goal: goal.trim(), id: initialData?.id });
     }
   };
 
@@ -31,7 +43,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onCreateProj
         <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
             <XIcon className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold mb-4">{t('newProjectModal.title')}</h2>
+        <h2 className="text-xl font-bold mb-4">{isEditing ? t('newProjectModal.editTitle') : t('newProjectModal.title')}</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('newProjectModal.description')}</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -74,7 +86,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onCreateProj
               className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-primary-300"
               disabled={!name.trim() || !goal.trim()}
             >
-              {t('newProjectModal.createProject')}
+              {isEditing ? t('newProjectModal.saveChanges') : t('newProjectModal.createProject')}
             </button>
           </div>
         </form>

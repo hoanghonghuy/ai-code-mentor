@@ -27,6 +27,9 @@ interface LearningPathProps {
   activeCustomProjectId: string | null;
   onSelectCustomProject: (projectId: string) => void;
   onNewProject: () => void;
+  onEditProject: (project: CustomProject) => void;
+  onDeleteProject: (project: CustomProject) => void;
+  isLoading: boolean;
   uiLanguage: string;
   onUiLanguageChange: (lang: string) => void;
   aiLanguage: string;
@@ -46,9 +49,10 @@ interface ModuleViewProps {
     bookmarkedLessonIds: string[];
     onToggleBookmark: (lessonId: string) => void;
     showOnlyBookmarked: boolean;
+    isLoading: boolean;
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, showOnlyBookmarked }) => {
+const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, showOnlyBookmarked, isLoading }) => {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = React.useState(true);
     
@@ -89,7 +93,8 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
                                     <li key={step.id} className="pl-2 group flex items-center">
                                         <button
                                             onClick={() => onSelectLesson(step)}
-                                            className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                                            disabled={isLoading}
+                                            className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                                                 isActive 
                                                 ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 font-semibold' 
                                                 : 'text-gray-600 dark:text-gray-400 hover:bg-primary-500/10'
@@ -145,7 +150,8 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
                                 <li key={lesson.id} className="pl-2 group flex items-center">
                                     <button
                                         onClick={() => onSelectLesson(lesson)}
-                                        className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                                        disabled={isLoading}
+                                        className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                                             isActive 
                                             ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 font-semibold' 
                                             : isCompleted 
@@ -175,7 +181,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const { t } = useTranslation();
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   
@@ -195,7 +201,8 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const ViewToggleButton: React.FC<{viewId: 'learningPath' | 'customProject', children: React.ReactNode, icon: React.ReactNode}> = ({ viewId, children, icon }) => (
     <button
         onClick={() => setActiveView(viewId)}
-        className={`w-full flex items-center justify-center gap-2 p-3 text-sm font-bold border-b-2 ${activeView === viewId ? 'text-primary-600 dark:text-primary-400 border-primary-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 border-transparent'}`}
+        disabled={isLoading}
+        className={`w-full flex items-center justify-center gap-2 p-3 text-sm font-bold border-b-2 disabled:opacity-50 disabled:cursor-not-allowed ${activeView === viewId ? 'text-primary-600 dark:text-primary-400 border-primary-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 border-transparent'}`}
     >
         {icon}{children}
     </button>
@@ -203,8 +210,8 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
 
   return (
     <>
-      <aside className={`absolute md:static z-20 h-full flex-shrink-0 w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
+      <aside className={`absolute md:relative z-20 h-full flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'w-80 translate-x-0' : 'w-0 -translate-x-full md:translate-x-0'}`}>
+        <div className="flex flex-col h-full w-80">
             <div className="flex-shrink-0">
                 <div className="flex items-start justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-lg font-bold">
@@ -227,46 +234,58 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                                 id="learning-path-select"
                                 value={activePathId}
                                 onChange={(e) => onSelectPath(e.target.value as LearningPathId)}
-                                className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                disabled={isLoading}
+                                className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                             >
                                 {allPaths.map(path => (
                                     <option key={path.id} value={path.id}>{path.title}</option>
                                 ))}
                             </select>
                         </div>
-                        {activeTab === 'lessons' && (
-                             <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <ProgressBar value={overallProgress} />
-                                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">{Math.round(overallProgress)}%</span>
-                                </div>
-                                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400">
-                                    <input 
-                                        type="checkbox"
-                                        checked={showOnlyBookmarked}
-                                        onChange={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
-                                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 bg-gray-100 dark:bg-gray-900"
-                                    />
-                                    {t('sidebar.showBookmarkedOnly')}
-                                </label>
-                            </div>
-                        )}
-                    </div>
-                    <div className="p-2 border-b border-gray-200 dark:border-gray-700">
-                        <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-1 space-x-1">
-                            <TabButton tabId="lessons">{t('sidebar.lessons')}</TabButton>
-                            <TabButton tabId="achievements">{t('sidebar.achievements')}</TabButton>
-                            <TabButton tabId="settings">{t('sidebar.settings')}</TabButton>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-500">{Math.round(overallProgress)}%</span>
+                            <ProgressBar value={overallProgress} />
                         </div>
                     </div>
+
+                    <div className="p-2 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between gap-2 p-1 bg-gray-200 dark:bg-gray-700/50 rounded-lg">
+                           <TabButton tabId="lessons">{t('sidebar.lessons')}</TabButton>
+                           <TabButton tabId="achievements">{t('sidebar.achievements')}</TabButton>
+                           <TabButton tabId="settings">{t('sidebar.settings')}</TabButton>
+                        </div>
+                    </div>
+                    
                     <div className="flex-1 p-4 overflow-y-auto">
-                        {activeTab === 'lessons' ? (
-                            learningPath.modules.map((module, index) => (
-                                <ModuleView key={`${module.title}-${index}`} module={module} onSelectLesson={onSelectLesson} activeLessonId={activeLessonId} bookmarkedLessonIds={bookmarkedLessonIds} onToggleBookmark={onToggleBookmark} showOnlyBookmarked={showOnlyBookmarked} />
-                            ))
-                        ) : activeTab === 'achievements' ? (
-                            <AchievementsView achievements={achievements} />
-                        ) : (
+                        {activeTab === 'lessons' && (
+                            <div>
+                                <div className="flex items-center justify-end mb-4">
+                                    <label className="flex items-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={showOnlyBookmarked} 
+                                            onChange={() => setShowOnlyBookmarked(!showOnlyBookmarked)}
+                                            className="w-4 h-4 rounded text-primary-600 bg-gray-100 border-gray-300 focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                        />
+                                        <span className="ml-2">{t('sidebar.showBookmarkedOnly')}</span>
+                                    </label>
+                                </div>
+                                {learningPath.modules.map((module, index) => (
+                                    <ModuleView 
+                                        key={index} 
+                                        module={module} 
+                                        onSelectLesson={onSelectLesson} 
+                                        activeLessonId={activeLessonId}
+                                        bookmarkedLessonIds={bookmarkedLessonIds}
+                                        onToggleBookmark={onToggleBookmark}
+                                        showOnlyBookmarked={showOnlyBookmarked}
+                                        isLoading={isLoading}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                        {activeTab === 'achievements' && <AchievementsView achievements={achievements}/>}
+                        {activeTab === 'settings' && (
                             <SettingsView 
                                 customDocs={customDocs} 
                                 onAddDoc={onAddDoc} 
@@ -275,7 +294,7 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                                 onUiLanguageChange={onUiLanguageChange}
                                 aiLanguage={aiLanguage}
                                 onAiLanguageChange={onAiLanguageChange}
-                             />
+                            />
                         )}
                     </div>
                 </>
@@ -285,11 +304,14 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                     activeProjectId={activeCustomProjectId}
                     onSelectProject={onSelectCustomProject}
                     onNewProject={onNewProject}
+                    onEditProject={onEditProject}
+                    onDeleteProject={onDeleteProject}
+                    isLoading={isLoading}
                 />
             )}
         </div>
       </aside>
-       {isOpen && <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/30 z-10 md:hidden"></div>}
+      {isOpen && <div onClick={() => setIsOpen(false)} className="fixed inset-0 z-10 bg-black/20 md:hidden"></div>}
     </>
   );
 };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -10,6 +11,7 @@ import { NoteIcon, PlayIcon, CodeIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
 import NewProjectModal from './components/NewProjectModal';
+import ConfirmationModal from './components/ConfirmationModal';
 import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc, serverTimestamp } from './firebase';
 import { useTranslation, Trans } from 'react-i18next';
 
@@ -55,7 +57,6 @@ const App: React.FC = () => {
 
   // App state
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -63,7 +64,9 @@ const App: React.FC = () => {
   // View mode state
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
 
-  const initialState = useMemo(() => getInitialState(), []);
+  // FIX: Explicitly pass the default value to getInitialState to resolve the "Expected 1 arguments, but got 0" error.
+  // Fix: Pass 'js-basics' to getInitialState to resolve the "Expected 1 arguments, but got 0" error.
+  const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
   const [activePathId, setActivePathId] = useState<LearningPathId>(initialState.activePathId);
@@ -74,7 +77,10 @@ const App: React.FC = () => {
   // Custom Project State
   const [customProjects, setCustomProjects] = useState<CustomProject[]>(initialState.customProjects);
   const [activeCustomProjectId, setActiveCustomProjectId] = useState<string | null>(initialState.activeCustomProjectId);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<CustomProject | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
+
 
   // Gamification State
   const [points, setPoints] = useState(initialState.points);
@@ -89,6 +95,11 @@ const App: React.FC = () => {
   
   // Settings State
   const [aiLanguage, setAiLanguage] = useState(initialState.aiLanguage);
+
+  // Ref to hold the latest messages array to prevent stale closures in callbacks
+  const messagesRef = useRef<ChatMessage[]>();
+  messagesRef.current = messages;
+  const chatSessionRef = useRef<{ contextId: string; session: Chat } | null>(null);
 
 
   const ai = useMemo(() => {
@@ -291,9 +302,19 @@ const App: React.FC = () => {
     });
   }, [ai, aiLanguage]);
 
-  useEffect(() => {
-    setChat(createChatInstance());
-  }, [createChatInstance]);
+  const getChatSession = useCallback((contextId: string): Chat | null => {
+      if (!ai) return null;
+      if (chatSessionRef.current && chatSessionRef.current.contextId === contextId) {
+          return chatSessionRef.current.session;
+      }
+      
+      const newSession = createChatInstance();
+      if (newSession) {
+        chatSessionRef.current = { contextId: contextId, session: newSession };
+      }
+      return newSession;
+  }, [ai, createChatInstance]);
+
 
   const showNotification = (achievement: Achievement) => {
     setNotification(achievement);
@@ -347,38 +368,39 @@ const App: React.FC = () => {
       targetView?: 'learningPath' | 'customProject'; 
     } = {}
   ) => {
-    const currentChatInstance = createChatInstance();
-    if (!currentChatInstance) return;
+    const viewContext = targetView || activeView;
+    const idContext = targetId || (viewContext === 'learningPath' ? activeLessonId : activeCustomProjectId);
+
+    if (!idContext) {
+      console.error("handleSendMessage called without a valid context ID.");
+      return;
+    }
+    
+    const chat = getChatSession(idContext);
+    if (!chat) {
+        console.error("Could not get a chat session.");
+        return;
+    }
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
     
-    let currentMessages: ChatMessage[] = [];
-    const baseHistory = initialHistory !== undefined ? initialHistory : messages;
-
-    if (!isSystemMessage) {
-        currentMessages = [...baseHistory, userMessage];
-        setMessages(currentMessages);
-    } else {
-        currentMessages = baseHistory;
-    }
-
+    const baseHistory = initialHistory ?? (messagesRef.current || []);
+    const initialMessagesForUI = isSystemMessage ? baseHistory : [...baseHistory, userMessage];
+    
+    setMessages(initialMessagesForUI);
     setIsLoading(true);
 
-    let finalMessages: ChatMessage[] = [];
-
     try {
-      const result = await currentChatInstance.sendMessageStream({ message });
+      const result = await chat.sendMessageStream({ message });
       let text = '';
       let sanitizedGroundingChunks: GroundingChunk[] = [];
       
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: '' }] };
-      let updatedMessages = [...currentMessages, modelMessage];
-      setMessages(updatedMessages);
+      setMessages([...initialMessagesForUI, modelMessage]);
       
       for await (const chunk of result) {
         text += chunk.text;
         
-        // Sanitize grounding chunks immediately upon receiving them
         if (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks) {
             sanitizedGroundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks
                 .map(c => ({
@@ -387,35 +409,34 @@ const App: React.FC = () => {
                         title: c.web?.title,
                     }
                 }))
-                .filter(c => c.web && c.web.uri); // Filter out any empty/invalid chunks
+                .filter(c => c.web && c.web.uri);
         }
 
-        const newUpdatedMessages = [...updatedMessages];
-        const lastMessage = newUpdatedMessages[newUpdatedMessages.length - 1];
-        newUpdatedMessages[newUpdatedMessages.length - 1] = { 
-            ...lastMessage,
-            parts: [{ text }],
-            // Use the sanitized data for the state update
-            groundingChunks: sanitizedGroundingChunks.length > 0 ? sanitizedGroundingChunks : undefined,
-          };
-        setMessages(newUpdatedMessages);
-        updatedMessages = newUpdatedMessages;
+        setMessages(prevMessages => {
+            const newMessages = [...prevMessages];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === 'model') {
+                 newMessages[newMessages.length - 1] = { 
+                    ...lastMessage,
+                    parts: [{ text }],
+                    groundingChunks: sanitizedGroundingChunks.length > 0 ? sanitizedGroundingChunks : undefined,
+                  };
+            }
+            return newMessages;
+        });
       }
-      finalMessages = updatedMessages;
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = { role: 'model', parts: [{ text: t('chat.errorMessage') }] };
-      finalMessages = [...currentMessages, errorMessage];
-      setMessages(finalMessages);
+      setMessages([...initialMessagesForUI, errorMessage]);
     } finally {
       setIsLoading(false);
       
-      const viewToSave = targetView || activeView;
-      const idToSave = targetId || (viewToSave === 'learningPath' ? activeLessonId : activeCustomProjectId);
+      const viewToSave = viewContext;
+      const idToSave = idContext;
       
-      if (!idToSave) return;
+      const finalMessages = messagesRef.current || [];
 
-      // Deep-clone and sanitize messages before saving to state to prevent circular reference errors.
       const cleanFinalMessages = finalMessages.map(msg => {
         const cleanMsg: ChatMessage = {
           role: msg.role,
@@ -446,7 +467,7 @@ const App: React.FC = () => {
         setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: cleanFinalMessages } : p));
       }
     }
-  }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId, t]);
+  }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession]);
 
   const handleFirstCodeRun = useCallback(() => {
     unlockAchievement('bug-hunter');
@@ -518,31 +539,49 @@ const App: React.FC = () => {
     }
   }, [user, resetStateForGuest]);
 
-  const handleCreateCustomProject = useCallback((name: string, goal: string) => {
-    const newProject: CustomProject = {
-      id: `proj-${Date.now()}`,
-      name,
-      goal,
-      chatHistory: [],
-    };
-    setCustomProjects(prev => [...prev, newProject]);
-    setActiveCustomProjectId(newProject.id);
-    setActiveView('customProject');
-    setIsModalOpen(false);
-    
-    const kickstartPrompt = `Start a new custom project with me.
-    My project is called: "${name}"
-    My main goal is: "${goal}"
-    
-    First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
-    
-    handleSendMessage(kickstartPrompt, { 
-      isSystemMessage: true, 
-      initialHistory: [],
-      targetId: newProject.id,
-      targetView: 'customProject'
-    });
+  const handleSaveCustomProject = useCallback(({ name, goal, id }: { name: string, goal: string, id?: string }) => {
+    if (id) { // Update
+        setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, name, goal } : p));
+    } else { // Create
+        const newProject: CustomProject = {
+          id: `proj-${Date.now()}`,
+          name,
+          goal,
+          chatHistory: [],
+        };
+        setCustomProjects(prev => [...prev, newProject]);
+        setActiveCustomProjectId(newProject.id);
+        setActiveView('customProject');
+        
+        const kickstartPrompt = `Start a new custom project with me.
+        My project is called: "${name}"
+        My main goal is: "${goal}"
+        
+        First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
+        
+        handleSendMessage(kickstartPrompt, { 
+          isSystemMessage: true, 
+          initialHistory: [],
+          targetId: newProject.id,
+          targetView: 'customProject'
+        });
+    }
+    setIsCreateModalOpen(false);
+    setProjectToEdit(null);
   }, [handleSendMessage]);
+
+  const handleDeleteCustomProject = useCallback(() => {
+    if (!projectToDelete) return;
+
+    setCustomProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+
+    if (activeCustomProjectId === projectToDelete.id) {
+        setActiveCustomProjectId(null);
+        setMessages([]);
+        setActiveView('learningPath');
+    }
+    setProjectToDelete(null);
+  }, [projectToDelete, activeCustomProjectId]);
 
   const handleSelectCustomProject = useCallback((projectId: string) => {
     setActiveCustomProjectId(projectId);
@@ -610,7 +649,10 @@ const App: React.FC = () => {
           customProjects={customProjects}
           activeCustomProjectId={activeCustomProjectId}
           onSelectCustomProject={handleSelectCustomProject}
-          onNewProject={() => setIsModalOpen(true)}
+          onNewProject={() => setIsCreateModalOpen(true)}
+          onEditProject={setProjectToEdit}
+          onDeleteProject={setProjectToDelete}
+          isLoading={isLoading}
           uiLanguage={i18n.language}
           onUiLanguageChange={(lang) => i18n.changeLanguage(lang)}
           aiLanguage={aiLanguage}
@@ -624,11 +666,11 @@ const App: React.FC = () => {
               </Trans>
             </div>
           )}
-          <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
-            <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
+            <div className="flex flex-col min-h-0">
               <ChatInterface messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
             </div>
-            <div className="flex-1 flex flex-col min-h-0 lg:max-w-xl xl:max-w-2xl">
+            <div className="flex flex-col min-h-0">
               <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 mb-2">
                 <div className="flex items-center">
                   <button 
@@ -661,7 +703,25 @@ const App: React.FC = () => {
         </main>
       </div>
       <Notification achievement={notification} />
-      {isModalOpen && <NewProjectModal onClose={() => setIsModalOpen(false)} onCreateProject={handleCreateCustomProject} />}
+      {(isCreateModalOpen || projectToEdit) && (
+          <NewProjectModal 
+            onClose={() => {
+                setIsCreateModalOpen(false);
+                setProjectToEdit(null);
+            }}
+            onSave={handleSaveCustomProject}
+            initialData={projectToEdit}
+          />
+      )}
+      {projectToDelete && (
+        <ConfirmationModal
+            title={t('deleteProjectModal.title')}
+            message={t('deleteProjectModal.message', { projectName: projectToDelete.name })}
+            onConfirm={handleDeleteCustomProject}
+            onClose={() => setProjectToDelete(null)}
+            confirmText={t('deleteProjectModal.confirm')}
+        />
+      )}
     </div>
   );
 };

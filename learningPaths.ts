@@ -17,8 +17,9 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 title: 'Module 2: Control Flow',
                 lessons: [
                     { id: 'js-2-1', title: 'Conditional Statements', prompt: 'Explain `if`, `else if`, and `else` statements in JavaScript. Provide a practical code example of checking a user\'s age.', completed: false },
-                    { id: 'js-2-2', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in JavaScript. When should I use each one? Show me examples of counting from 1 to 5.', completed: false },
-                    { id: 'js-2-3', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values. Create a function that adds two numbers.', completed: false },
+                    { id: 'js-2-2', title: 'Switch Statements', prompt: 'Teach me about the `switch` statement in JavaScript as an alternative to long `if-else if` chains. Provide a simple example.', completed: false },
+                    { id: 'js-2-3', title: 'Loops', prompt: 'Teach me about `for` and `while` loops in JavaScript. When should I use each one? Show me examples of counting from 1 to 5.', completed: false },
+                    { id: 'js-2-4', title: 'Functions', prompt: 'What are functions in JavaScript? Explain how to declare them and call them, including parameters and return values. Create a function that adds two numbers.', completed: false },
                 ],
             },
             {
@@ -26,7 +27,8 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 lessons: [
                     { id: 'js-3-1', title: 'Arrays', prompt: 'Introduce me to JavaScript Arrays. How do I create them, access elements by index, and find the length? Show me how to add and remove items.', completed: false },
                     { id: 'js-3-2', title: 'Objects', prompt: 'Explain JavaScript Objects for storing key-value pairs. Show me how to create an object, access properties using dot and bracket notation, and add new properties.', completed: false },
-                    { id: 'js-3-3', title: 'Array Methods', prompt: 'Teach me about useful array methods like `forEach`, `map`, and `filter`. Provide a simple example for each to manipulate an array of numbers.', completed: false },
+                    { id: 'js-3-3', title: 'Object Methods', prompt: 'Explain how to add functions as properties on an object (methods) in JavaScript. Show me a `person` object with a `greet` method.', completed: false },
+                    { id: 'js-3-4', title: 'Array Methods', prompt: 'Teach me about useful array methods like `forEach`, `map`, and `filter`. Provide a simple example for each to manipulate an array of numbers.', completed: false },
                 ]
             },
             {
@@ -50,9 +52,10 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 title: 'Module 6: Modern JavaScript (ES6+)',
                 lessons: [
                     { id: 'js-6-1', title: 'Arrow Functions', prompt: 'What are arrow functions in ES6? Explain their syntax and how `this` works differently compared to traditional functions.', completed: false },
-                    { id: 'js-6-2', title: 'Destructuring', prompt: 'Teach me about array and object destructuring in ES6. Provide examples for both.', completed: false },
-                    { id: 'js-6-3', title: 'Spread & Rest Operators', prompt: 'Explain the spread (`...`) and rest (`...`) operators. Show a practical example for each.', completed: false },
-                    { id: 'js-6-4', title: 'Modules', prompt: 'What are JavaScript modules? Explain `import` and `export` syntax for sharing code between files.', completed: false },
+                    { id: 'js-6-2', title: 'Template Literals', prompt: 'Teach me about template literals in ES6 for easier string interpolation and multi-line strings.', completed: false },
+                    { id: 'js-6-3', title: 'Destructuring', prompt: 'Teach me about array and object destructuring in ES6. Provide examples for both.', completed: false },
+                    { id: 'js-6-4', title: 'Spread & Rest Operators', prompt: 'Explain the spread (`...`) and rest (`...`) operators. Show a practical example for each.', completed: false },
+                    { id: 'js-6-5', title: 'Modules', prompt: 'What are JavaScript modules? Explain `import` and `export` syntax for sharing code between files.', completed: false },
                 ]
             },
             {
@@ -148,6 +151,62 @@ const allPaths: Record<LearningPathId, LearningPath> = {
                 }
             }
         ],
+    },
+    'git-basics': {
+        id: 'git-basics',
+        title: 'Git for Beginners',
+        modules: [
+            {
+                title: 'Module 1: Getting Started',
+                lessons: [
+                    { id: 'git-1-1', title: 'What is Version Control?', prompt: 'Explain what version control is and why it is essential for software development. Use an analogy like saving progress in a video game.', completed: false },
+                    { id: 'git-1-2', title: 'What is Git?', prompt: 'Introduce me to Git as a distributed version control system. What are the main differences between Git and other systems like SVN?', completed: false },
+                    { id: 'git-1-3', title: 'First-Time Git Setup', prompt: 'Guide me through the initial configuration of Git on a new machine using `git config`, including setting my username and email.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 2: The Basic Workflow',
+                lessons: [
+                    { id: 'git-2-1', title: 'Creating a Repository', prompt: 'How do I start tracking a project with Git? Explain the `git init` command.', completed: false },
+                    { id: 'git-2-2', title: 'The Three States', prompt: 'Explain the three states of a file in Git: modified, staged, and committed. How does the working directory, staging area, and repository relate to this?', completed: false },
+                    { id: 'git-2-3', title: 'Staging and Committing', prompt: 'Teach me how to use `git add` to stage changes and `git commit` to save them to the repository. What makes a good commit message?', completed: false },
+                    { id: 'git-2-4', title: 'Checking Status & History', prompt: 'Show me how to use `git status` to see the state of my project and `git log` to view the commit history.', completed: false },
+                ],
+            },
+            {
+                title: 'Module 3: Branching & Merging',
+                lessons: [
+                    { id: 'git-3-1', title: 'What are Branches?', prompt: 'Explain what branches are in Git and why they are so powerful for developing features in isolation.', completed: false },
+                    { id: 'git-3-2', title: 'Creating & Switching', prompt: 'Teach me how to create a new branch with `git branch` and how to switch to it with `git checkout` or `git switch`.', completed: false },
+                    { id: 'git-3-3', title: 'Merging', prompt: 'How do I combine the work from one branch into another? Explain the `git merge` command and the concept of a fast-forward merge.', completed: false },
+                    { id: 'git-3-4', title: 'Handling Merge Conflicts', prompt: 'What is a merge conflict? Explain why they happen and guide me through the basic steps of resolving one.', completed: false },
+                ]
+            },
+            {
+                title: 'Module 4: Working with Remotes',
+                lessons: [
+                    { id: 'git-4-1', title: 'What are Remotes?', prompt: 'Explain what a remote repository is and why we use services like GitHub or GitLab.', completed: false },
+                    { id: 'git-4-2', title: 'Adding & Viewing Remotes', prompt: 'Show me how to connect my local repository to a remote one using `git remote add`.', completed: false },
+                    { id: 'git-4-3', title: 'Pushing and Pulling', prompt: 'Teach me the difference between `git push` to send my changes to a remote, and `git pull` to get the latest changes from it.', completed: false },
+                    { id: 'git-4-4', title: 'Cloning a Repository', prompt: 'How do I get a local copy of an existing remote repository? Explain the `git clone` command.', completed: false },
+                ]
+            },
+            {
+                title: 'Project: Basic Git Workflow',
+                project: {
+                    id: 'proj-git-workflow',
+                    title: 'Project: Basic Git Workflow',
+                    description: 'Simulate a real-world Git workflow by creating a project, developing a feature on a branch, and merging it back.',
+                    steps: [
+                        { id: 'proj-git-1', title: 'Step 1: Initialize Project', prompt: 'Guide me to create a new directory, initialize a Git repository inside it, and make an initial commit with a README.md file.', completed: false },
+                        { id: 'proj-git-2', title: 'Step 2: Create a Feature Branch', prompt: 'My next task is to add a new feature. Guide me to create and switch to a new branch named `add-license`.', completed: false },
+                        { id: 'proj-git-3', title: 'Step 3: Develop the "Feature"', prompt: 'On the `add-license` branch, help me create a `LICENSE` file with some text inside. Then, stage and commit this change.', completed: false },
+                        { id: 'proj-git-4', title: 'Step 4: Update the Main Branch', prompt: 'Someone else "updated" the main branch while I was working. Guide me to switch back to `main` and append a line of text to the `README.md` file, and commit it.', completed: false },
+                        { id: 'proj-git-5', title: 'Step 5: Merge the Feature', prompt: 'My feature is complete. Teach me how to merge the `add-license` branch back into the `main` branch.', completed: false },
+                    ]
+                }
+            }
+        ]
     },
     'typescript-basics': {
         id: 'typescript-basics',

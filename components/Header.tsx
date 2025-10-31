@@ -61,7 +61,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, poin
   return (
     <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
       <div className="flex items-center gap-4">
-         <button onClick={toggleSidebar} className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+         <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
           <MenuIcon className="w-6 h-6"/>
         </button>
         <div className="flex items-center gap-2">

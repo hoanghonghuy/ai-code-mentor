@@ -71,17 +71,26 @@
   "customProjects": {
     "noProjects": "Chưa có dự án nào.",
     "noProjectsHint": "Nhấp vào \"Dự án mới\" để bắt đầu xây dựng!",
-    "newProject": "Dự án mới"
+    "newProject": "Dự án mới",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
   },
   "newProjectModal": {
     "title": "Tạo dự án mới",
+    "editTitle": "Chỉnh sửa dự án",
     "description": "Mô tả mục tiêu dự án của bạn, và AI Mentor sẽ hướng dẫn bạn từ đó.",
     "projectName": "Tên dự án",
     "projectNamePlaceholder": "VD: Portfolio cá nhân",
     "projectGoal": "Bạn muốn xây dựng cái gì?",
     "projectGoalPlaceholder": "VD: Một trang web đơn giản để giới thiệu công việc thiết kế của tôi, được xây dựng bằng React và Tailwind CSS.",
     "cancel": "Hủy",
-    "createProject": "Tạo dự án"
+    "createProject": "Tạo dự án",
+    "saveChanges": "Lưu thay đổi"
+  },
+  "deleteProjectModal": {
+    "title": "Xóa dự án",
+    "message": "Bạn có chắc chắn muốn xóa \"{{projectName}}\"? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa"
   },
   "tabs": {
     "playground": "Sân chơi",

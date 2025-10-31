@@ -71,17 +71,26 @@
   "customProjects": {
     "noProjects": "No projects yet.",
     "noProjectsHint": "Click \"New Project\" to start building!",
-    "newProject": "New Project"
+    "newProject": "New Project",
+    "edit": "Edit",
+    "delete": "Delete"
   },
   "newProjectModal": {
     "title": "Create a New Project",
+    "editTitle": "Edit Project",
     "description": "Describe your project goal, and the AI Mentor will guide you from there.",
     "projectName": "Project Name",
     "projectNamePlaceholder": "e.g., Personal Portfolio",
     "projectGoal": "What do you want to build?",
     "projectGoalPlaceholder": "e.g., A simple website to showcase my design work, built with React and Tailwind CSS.",
     "cancel": "Cancel",
-    "createProject": "Create Project"
+    "createProject": "Create Project",
+    "saveChanges": "Save Changes"
+  },
+  "deleteProjectModal": {
+    "title": "Delete Project",
+    "message": "Are you sure you want to delete \"{{projectName}}\"? This action cannot be undone.",
+    "confirm": "Delete"
   },
   "tabs": {
     "playground": "Playground",
