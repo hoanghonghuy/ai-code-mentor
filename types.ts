@@ -1,5 +1,8 @@
 import { Chat } from "@google/genai";
 import type { ElementType } from 'react';
+import type { User } from 'firebase/auth';
+
+export { User };
 
 export interface GroundingChunk {
   web?: {
@@ -73,4 +76,19 @@ export interface AppContextType {
   theme: Theme;
   toggleTheme: () => void;
   chat: Chat | null;
+}
+
+export interface UserData {
+  learningPath: LearningPath;
+  activeLessonId: string | null;
+  learningPathHistories: { [key: string]: ChatMessage[] };
+  customProjects: CustomProject[];
+  activeCustomProjectId: string | null;
+  points: number;
+  achievements: Achievement[];
+  notes: { [key: string]: string };
+  bookmarkedLessonIds: string[];
+  customDocs: string[];
+  activePathId: LearningPathId;
+  lastSaved?: any;
 }

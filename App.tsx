@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
 import Notification from './components/Notification';
-import { TrophyIcon, NoteIcon, PlayIcon } from './components/icons';
+import { TrophyIcon, NoteIcon, PlayIcon, CodeIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
 import NewProjectModal from './components/NewProjectModal';
+import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc, serverTimestamp } from './firebase';
 
 const getInitialAchievements = (pathTitle: string): Achievement[] => {
     const definitions: Omit<Achievement, 'unlocked'>[] = [
@@ -22,8 +23,31 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
     return definitions.map(ach => ({ ...ach, unlocked: false }));
 };
 
+const getInitialLearningPath = (pathId: LearningPathId): LearningPath => JSON.parse(JSON.stringify(learningPaths[pathId]));
+
+const getInitialState = (pathId: LearningPathId = 'js-basics') => {
+  const path = getInitialLearningPath(pathId);
+  return {
+    activePathId: pathId,
+    learningPath: path,
+    activeLessonId: null,
+    learningPathHistories: {},
+    customProjects: [],
+    activeCustomProjectId: null,
+    points: 0,
+    achievements: getInitialAchievements(path.title),
+    notes: {},
+    bookmarkedLessonIds: [],
+    customDocs: ['https://react.dev', 'https://developer.mozilla.org/'],
+  };
+};
 
 const App: React.FC = () => {
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // App state
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -33,26 +57,28 @@ const App: React.FC = () => {
   // View mode state
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
 
+  const initialState = useMemo(() => getInitialState(), []);
+  
   // Learning Path State
-  const [activePathId, setActivePathId] = useState<LearningPathId>('js-basics');
-  const [learningPath, setLearningPath] = useState<LearningPath>(learningPaths[activePathId]);
-  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
-  const [learningPathHistories, setLearningPathHistories] = useState<{ [key: string]: ChatMessage[] }>({});
+  const [activePathId, setActivePathId] = useState<LearningPathId>(initialState.activePathId);
+  const [learningPath, setLearningPath] = useState<LearningPath>(initialState.learningPath);
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(initialState.activeLessonId);
+  const [learningPathHistories, setLearningPathHistories] = useState<{ [key: string]: ChatMessage[] }>(initialState.learningPathHistories);
 
   // Custom Project State
-  const [customProjects, setCustomProjects] = useState<CustomProject[]>([]);
-  const [activeCustomProjectId, setActiveCustomProjectId] = useState<string | null>(null);
+  const [customProjects, setCustomProjects] = useState<CustomProject[]>(initialState.customProjects);
+  const [activeCustomProjectId, setActiveCustomProjectId] = useState<string | null>(initialState.activeCustomProjectId);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Gamification State
-  const [points, setPoints] = useState(0);
-  const [achievements, setAchievements] = useState<Achievement[]>(getInitialAchievements(learningPath.title));
+  const [points, setPoints] = useState(initialState.points);
+  const [achievements, setAchievements] = useState<Achievement[]>(initialState.achievements);
   const [notification, setNotification] = useState<Achievement | null>(null);
 
   // Tools State
-  const [notes, setNotes] = useState<{ [key: string]: string }>({});
-  const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>([]);
-  const [customDocs, setCustomDocs] = useState<string[]>(['https://react.dev', 'https://developer.mozilla.org/']);
+  const [notes, setNotes] = useState<{ [key: string]: string }>(initialState.notes);
+  const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>(initialState.bookmarkedLessonIds);
+  const [customDocs, setCustomDocs] = useState<string[]>(initialState.customDocs);
   const [activeRightTab, setActiveRightTab] = useState<'playground' | 'notes'>('playground');
 
 
@@ -63,6 +89,8 @@ const App: React.FC = () => {
     return null;
   }, []);
 
+  const hasLoadedData = useRef(false);
+
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -72,7 +100,6 @@ const App: React.FC = () => {
   }, [theme]);
   
   // Effect to synchronize the displayed messages with the active chat history source.
-  // This ensures that switching between lessons or projects correctly loads the conversation.
   useEffect(() => {
       if (activeView === 'learningPath') {
           setMessages(learningPathHistories[activeLessonId || ''] || []);
@@ -83,6 +110,115 @@ const App: React.FC = () => {
           setMessages([]);
       }
   }, [activeView, activeLessonId, activeCustomProjectId, learningPathHistories, customProjects]);
+
+  const resetStateForGuest = useCallback((pathId: LearningPathId = 'js-basics') => {
+      const freshState = getInitialState(pathId);
+      setActivePathId(freshState.activePathId);
+      setLearningPath(freshState.learningPath);
+      setActiveLessonId(freshState.activeLessonId);
+      setLearningPathHistories(freshState.learningPathHistories);
+      setCustomProjects(freshState.customProjects);
+      setActiveCustomProjectId(freshState.activeCustomProjectId);
+      setPoints(freshState.points);
+      setAchievements(freshState.achievements);
+      setNotes(freshState.notes);
+      setBookmarkedLessonIds(freshState.bookmarkedLessonIds);
+      setMessages([]);
+      setActiveView('learningPath');
+  }, []);
+
+  // Auth listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        if (currentUser) {
+            setUser(currentUser);
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            
+            if (userDocSnap.exists()) {
+                const data = userDocSnap.data() as UserData;
+                // Restore state from Firebase
+                setActivePathId(data.activePathId || 'js-basics');
+                setLearningPath(data.learningPath || getInitialLearningPath(data.activePathId || 'js-basics'));
+                setActiveLessonId(data.activeLessonId || null);
+                setLearningPathHistories(data.learningPathHistories || {});
+                setCustomProjects(data.customProjects || []);
+                setActiveCustomProjectId(data.activeCustomProjectId || null);
+                setPoints(data.points || 0);
+                setAchievements(data.achievements || getInitialAchievements(data.learningPath.title));
+                setNotes(data.notes || {});
+                setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
+                setCustomDocs(data.customDocs || ['https://react.dev', 'https://developer.mozilla.org/']);
+            }
+            hasLoadedData.current = true;
+        } else {
+            setUser(null);
+            hasLoadedData.current = false;
+            resetStateForGuest();
+        }
+        setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [resetStateForGuest]);
+
+  // Effect to save data to firestore on change
+  useEffect(() => {
+    if (!user || !hasLoadedData.current || authLoading) {
+        return;
+    }
+
+    const currentState: UserData = {
+        activePathId,
+        learningPath,
+        activeLessonId,
+        learningPathHistories,
+        customProjects,
+        activeCustomProjectId,
+        points,
+        achievements,
+        notes,
+        bookmarkedLessonIds,
+        customDocs,
+        lastSaved: serverTimestamp(),
+    };
+
+    const saveData = async () => {
+        if (user) {
+            try {
+                await setDoc(doc(db, "users", user.uid), currentState, { merge: true });
+            } catch (error) {
+                console.error("Error saving user data:", error);
+            }
+        }
+    };
+
+    const timer = setTimeout(saveData, 1500); // Debounce save
+    return () => clearTimeout(timer);
+
+  }, [
+    user, authLoading,
+    activePathId, learningPath, activeLessonId, learningPathHistories,
+    customProjects, activeCustomProjectId, points, achievements,
+    notes, bookmarkedLessonIds, customDocs
+  ]);
+
+
+  const handleLogin = async () => {
+      try {
+          await signInWithPopup(auth, googleProvider);
+      } catch (error) {
+          console.error("Authentication error:", error);
+      }
+  };
+
+  const handleLogout = async () => {
+      try {
+          await signOut(auth);
+      } catch (error) {
+          console.error("Sign out error:", error);
+      }
+  };
 
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
@@ -164,14 +300,16 @@ const App: React.FC = () => {
 
     setIsLoading(true);
 
+    let finalMessages: ChatMessage[] = [];
+
     try {
       const result = await currentChatInstance.sendMessageStream({ message });
       let text = '';
       let groundingChunks: GroundingChunk[] = [];
       
       const modelMessage: ChatMessage = { role: 'model', parts: [{ text: '' }] };
-      currentMessages = [...currentMessages, modelMessage];
-      setMessages(currentMessages);
+      let updatedMessages = [...currentMessages, modelMessage];
+      setMessages(updatedMessages);
       
       for await (const chunk of result) {
         text += chunk.text;
@@ -179,28 +317,29 @@ const App: React.FC = () => {
             groundingChunks = chunk.candidates[0].groundingMetadata.groundingChunks;
         }
 
-        const updatedMessages = [...currentMessages];
-        const lastMessage = updatedMessages[updatedMessages.length - 1];
-        updatedMessages[updatedMessages.length - 1] = { 
+        const newUpdatedMessages = [...updatedMessages];
+        const lastMessage = newUpdatedMessages[newUpdatedMessages.length - 1];
+        newUpdatedMessages[newUpdatedMessages.length - 1] = { 
             ...lastMessage,
             parts: [{ text }],
             groundingChunks: groundingChunks.length > 0 ? groundingChunks : undefined,
           };
-        setMessages(updatedMessages);
-        currentMessages = updatedMessages;
+        setMessages(newUpdatedMessages);
+        updatedMessages = newUpdatedMessages;
       }
+      finalMessages = updatedMessages;
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = { role: 'model', parts: [{ text: "Sorry, I encountered an error. Please try again." }] };
-      currentMessages = [...currentMessages, errorMessage];
-      setMessages(currentMessages);
+      finalMessages = [...currentMessages, errorMessage];
+      setMessages(finalMessages);
     } finally {
       setIsLoading(false);
       // Persist the final state of messages
       if (activeView === 'learningPath' && activeLessonId) {
-        setLearningPathHistories(prev => ({ ...prev, [activeLessonId]: currentMessages }));
+        setLearningPathHistories(prev => ({ ...prev, [activeLessonId]: finalMessages }));
       } else if (activeView === 'customProject' && activeCustomProjectId) {
-        setCustomProjects(prev => prev.map(p => p.id === activeCustomProjectId ? { ...p, chatHistory: currentMessages } : p));
+        setCustomProjects(prev => prev.map(p => p.id === activeCustomProjectId ? { ...p, chatHistory: finalMessages } : p));
       }
     }
   }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId]);
@@ -211,7 +350,7 @@ const App: React.FC = () => {
   
   const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
     setActiveView('learningPath');
-    setActiveLessonId(item.id); // This state change triggers the useEffect to load the correct chat history.
+    setActiveLessonId(item.id);
 
     const history = learningPathHistories[item.id] || [];
     
@@ -253,15 +392,22 @@ const App: React.FC = () => {
   }, [handleSendMessage, unlockAchievement, learningPathHistories]);
 
   const handleSelectPath = useCallback((pathId: LearningPathId) => {
-    setActivePathId(pathId);
-    const newPathData = JSON.parse(JSON.stringify(learningPaths[pathId]));
-    setLearningPath(newPathData);
-    setAchievements(getInitialAchievements(newPathData.title));
-    setPoints(0);
-    setActiveLessonId(null);
-    setLearningPathHistories({});
-    setActiveView('learningPath');
-  }, []);
+    if (user) {
+        const newPathData = getInitialLearningPath(pathId);
+        setActivePathId(pathId);
+        setLearningPath(newPathData);
+        setAchievements(getInitialAchievements(newPathData.title));
+        setPoints(0);
+        setActiveLessonId(null);
+        setLearningPathHistories({});
+        setNotes({});
+        setBookmarkedLessonIds([]);
+        setActiveView('learningPath');
+        setMessages([]);
+    } else {
+        resetStateForGuest(pathId);
+    }
+  }, [user, resetStateForGuest]);
 
   const handleCreateCustomProject = useCallback((name: string, goal: string) => {
     const newProject: CustomProject = {
@@ -296,6 +442,17 @@ const App: React.FC = () => {
   }, [activeLessonId, learningPath]);
 
 
+  if (authLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="text-center">
+                <CodeIcon className="w-16 h-16 text-primary-600 animate-pulse mx-auto" />
+                <p className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">Loading AI Code Mentor...</p>
+            </div>
+        </div>
+    );
+  }
+
   if (!process.env.API_KEY) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -309,7 +466,15 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header theme={theme} toggleTheme={toggleTheme} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} points={points} />
+      <Header 
+        theme={theme} 
+        toggleTheme={toggleTheme} 
+        toggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+        points={points} 
+        user={user}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+      />
       <div className="flex flex-1 overflow-hidden">
         <LearningPathView 
           activeView={activeView}
@@ -334,6 +499,11 @@ const App: React.FC = () => {
           onNewProject={() => setIsModalOpen(true)}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
+          {!user && (
+            <div className="bg-primary-100 dark:bg-primary-900/50 border border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200 px-4 py-2 rounded-lg text-sm text-center">
+              You are in guest mode. <button onClick={handleLogin} className="font-bold underline hover:text-primary-600 dark:hover:text-primary-300">Login</button> to save your progress.
+            </div>
+          )}
           <div className="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0">
               <ChatInterface messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
