@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon } from './icons';
+import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon } from './icons';
 
 // Add hljs to the window object for TypeScript
 declare const hljs: any;
@@ -47,7 +47,7 @@ const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; 
 };
 
 
-const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
+const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text, searchQuery }) => {
   const [copiedBlockIndex, setCopiedBlockIndex] = useState<number | null>(null);
 
   const handleCopyCode = (code: string, index: number) => {
@@ -58,6 +58,33 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
       }, 2000);
     });
   };
+
+    const highlightText = (textSegment: string): React.ReactNode => {
+        if (!searchQuery.trim() || !textSegment) {
+            return textSegment;
+        }
+        // Escape special characters for regex
+        const escapedQuery = searchQuery.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        
+        if (!regex.test(textSegment)) {
+            return textSegment;
+        }
+
+        const parts = textSegment.split(regex);
+        
+        return (
+            <>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === searchQuery.toLowerCase() ? (
+                        <mark key={i} className="bg-yellow-300 dark:bg-yellow-500 text-black rounded px-0.5">{part}</mark>
+                    ) : (
+                        part
+                    )
+                )}
+            </>
+        );
+    };
 
   // 1. Helper to parse inline elements: **bold**, *italic*, `code`
   const parseInline = (line: string): React.ReactNode => {
@@ -70,14 +97,14 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
     while ((match = regex.exec(line)) !== null) {
       // Add preceding text
       if (match.index > lastIndex) {
-        elements.push(line.substring(lastIndex, match.index));
+        elements.push(highlightText(line.substring(lastIndex, match.index)));
       }
       // Add the matched element
       if (match[2] !== undefined) { // Bold
-        elements.push(<strong key={match.index}>{match[2]}</strong>);
+        elements.push(<strong key={match.index}>{highlightText(match[2])}</strong>);
       } else if (match[4] !== undefined) { // Italic
-        elements.push(<em key={match.index}>{match[4]}</em>);
-      } else if (match[6] !== undefined) { // Code
+        elements.push(<em key={match.index}>{highlightText(match[4])}</em>);
+      } else if (match[6] !== undefined) { // Code - no highlight
         elements.push(<code key={match.index} className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded-md font-mono text-sm">{match[6]}</code>);
       }
       lastIndex = regex.lastIndex;
@@ -85,7 +112,7 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
 
     // Add remaining text
     if (lastIndex < line.length) {
-      elements.push(line.substring(lastIndex));
+      elements.push(highlightText(line.substring(lastIndex)));
     }
 
     return <>{elements}</>;
@@ -159,19 +186,76 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  
   const [copiedMessage, setCopiedMessage] = useState<{ index: number; type: 'text' | 'markdown' } | null>(null);
-
+  
+  // Search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<number[]>([]);
+  const [currentResultIndex, setCurrentResultIndex] = useState(-1);
+  
+  // Effect for auto-scrolling
   useEffect(() => {
     const node = chatContainerRef.current;
-    if (node) {
-      // Only auto-scroll if the user is near the bottom.
+    if (node && !isSearchOpen) { // Only auto-scroll when not searching
       const isScrolledToBottom = node.scrollHeight - node.clientHeight <= node.scrollTop + 50;
       if (isScrolledToBottom) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [messages]);
+  }, [messages, isSearchOpen]);
   
+   // Effect for real-time search
+  useEffect(() => {
+    if (!isSearchOpen) {
+        setSearchResults([]);
+        setCurrentResultIndex(-1);
+        return;
+    }
+
+    if (searchQuery.trim() === '') {
+        setSearchResults([]);
+        setCurrentResultIndex(-1);
+        return;
+    }
+
+    const results = messages
+        .map((msg, index) => 
+            msg.parts[0].text.toLowerCase().includes(searchQuery.toLowerCase()) ? index : -1
+        )
+        .filter(index => index !== -1);
+    
+    setSearchResults(results);
+    setCurrentResultIndex(results.length > 0 ? 0 : -1);
+
+  }, [searchQuery, messages, isSearchOpen]);
+
+  // Effect for scrolling to search result
+  useEffect(() => {
+    if (currentResultIndex !== -1 && searchResults.length > 0) {
+        const messageIndex = searchResults[currentResultIndex];
+        messageRefs.current[messageIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentResultIndex, searchResults]);
+
+  const handleToggleSearch = () => {
+    setIsSearchOpen(prev => !prev);
+    if(isSearchOpen) setSearchQuery('');
+  };
+
+  const handleNavigateSearch = (direction: 'next' | 'prev') => {
+    if (searchResults.length === 0) return;
+
+    if (direction === 'next') {
+        setCurrentResultIndex(prev => (prev + 1) % searchResults.length);
+    } else {
+        setCurrentResultIndex(prev => (prev - 1 + searchResults.length) % searchResults.length);
+    }
+  };
+
+
   const handleCopyFullMessage = (text: string, index: number, type: 'text' | 'markdown') => {
     let contentToCopy = text;
     if (type === 'text') {
@@ -199,83 +283,125 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
     }
   };
 
+  messageRefs.current = [];
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold">AI Mentor Chat</h2>
+        <button
+            onClick={handleToggleSearch}
+            className={`p-2 rounded-md ${isSearchOpen ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            aria-label="Search messages"
+          >
+            <SearchIcon className="w-5 h-5" />
+          </button>
       </div>
-      <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-6">
-        {messages.map((msg, index) => (
-          <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-            {msg.role === 'model' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 flex items-center justify-center"><BotIcon className="w-5 h-5 text-white" /></div>}
-            
-            <div className="flex flex-col items-start max-w-xl">
-                <div className="w-full group">
-                    <div className={`rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                      <div className="p-3">
-                         <SimpleMarkdown text={msg.parts[0].text} />
-                      </div>
-                       {msg.groundingChunks && msg.groundingChunks.length > 0 && (
-                        <div className="border-t border-gray-300 dark:border-gray-600 mt-2 p-3">
-                          <h4 className="text-xs font-bold mb-2 flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                            <LinkIcon className="w-4 h-4" />
-                            Sources
-                          </h4>
-                          <ul className="space-y-1">
-                            {/* FIX: Check for chunk.web.uri as it is now optional in the type definition */}
-                            {msg.groundingChunks.map((chunk, i) => chunk.web && chunk.web.uri && (
-                              <li key={i} className="text-xs">
-                                <a 
-                                  href={chunk.web.uri} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-primary-600 dark:text-primary-400 hover:underline truncate block"
-                                  title={chunk.web.title}
-                                >
-                                  {chunk.web.title || chunk.web.uri}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                     {msg.role === 'model' && msg.parts[0].text && (
-                        <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <button
-                                onClick={() => handleCopyFullMessage(msg.parts[0].text, index, 'text')}
-                                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-                                aria-label="Copy message as plain text"
-                            >
-                                {copiedMessage?.index === index && copiedMessage?.type === 'text' ? (
-                                    <CheckIcon className="w-3.5 h-3.5 text-green-500" />
-                                ) : (
-                                    <CopyIcon className="w-3.5 h-3.5" />
-                                )}
-                                <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'text' ? 'Copied' : 'Copy Text'}</span>
-                            </button>
-                             <button
-                                onClick={() => handleCopyFullMessage(msg.parts[0].text, index, 'markdown')}
-                                className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-                                aria-label="Copy message as Markdown"
-                            >
-                                {copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? (
-                                    <CheckIcon className="w-3.5 h-3.5 text-green-500" />
-                                ) : (
-                                    <CopyIcon className="w-3.5 h-3.5" />
-                                )}
-                                <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? 'Copied' : 'Copy Markdown'}</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
+       {isSearchOpen && (
+        <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                    <SearchIcon className="w-4 h-4 text-gray-400" />
+                </span>
+                <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search messages..."
+                    className="w-full p-1.5 pl-8 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    autoFocus
+                />
             </div>
-
-            {msg.role === 'user' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"><UserIcon className="w-5 h-5" /></div>}
+            <button onClick={() => handleNavigateSearch('prev')} disabled={searchResults.length < 2} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"><ChevronUpIcon className="w-5 h-5"/></button>
+            <button onClick={() => handleNavigateSearch('next')} disabled={searchResults.length < 2} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50"><ChevronDownIcon className="w-5 h-5"/></button>
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-16 text-center">
+              {searchResults.length > 0 ? `${currentResultIndex + 1} of ${searchResults.length}` : searchQuery ? '0 results' : ''}
+            </span>
+            <button onClick={handleToggleSearch} className="p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><XIcon className="w-5 h-5"/></button>
           </div>
-        ))}
+        </div>
+      )}
+      <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-2">
+        {messages.map((msg, index) => {
+           const activeSearchResultIndex = searchResults.length > 0 ? searchResults[currentResultIndex] : -1;
+           const isCurrentSearchResult = index === activeSearchResultIndex;
+
+           return (
+              <div 
+                key={index} 
+                ref={el => { if(el) messageRefs.current[index] = el }}
+                className={`flex gap-3 transition-colors duration-300 p-2 rounded-lg ${msg.role === 'user' ? 'justify-end' : ''} ${isCurrentSearchResult ? 'bg-primary-500/10' : ''}`}
+              >
+                {msg.role === 'model' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 flex items-center justify-center"><BotIcon className="w-5 h-5 text-white" /></div>}
+                
+                <div className="flex flex-col items-start max-w-xl">
+                    <div className="w-full group">
+                        <div className={`rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <div className="p-3">
+                             <SimpleMarkdown text={msg.parts[0].text} searchQuery={isSearchOpen ? searchQuery : ''} />
+                          </div>
+                           {msg.groundingChunks && msg.groundingChunks.length > 0 && (
+                            <div className="border-t border-gray-300 dark:border-gray-600 mt-2 p-3">
+                              <h4 className="text-xs font-bold mb-2 flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                <LinkIcon className="w-4 h-4" />
+                                Sources
+                              </h4>
+                              <ul className="space-y-1">
+                                {/* FIX: Check for chunk.web.uri as it is now optional in the type definition */}
+                                {msg.groundingChunks.map((chunk, i) => chunk.web && chunk.web.uri && (
+                                  <li key={i} className="text-xs">
+                                    <a 
+                                      href={chunk.web.uri} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-primary-600 dark:text-primary-400 hover:underline truncate block"
+                                      title={chunk.web.title}
+                                    >
+                                      {chunk.web.title || chunk.web.uri}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                         {msg.role === 'model' && msg.parts[0].text && (
+                            <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button
+                                    onClick={() => handleCopyFullMessage(msg.parts[0].text, index, 'text')}
+                                    className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                                    aria-label="Copy message as plain text"
+                                >
+                                    {copiedMessage?.index === index && copiedMessage?.type === 'text' ? (
+                                        <CheckIcon className="w-3.5 h-3.5 text-green-500" />
+                                    ) : (
+                                        <CopyIcon className="w-3.5 h-3.5" />
+                                    )}
+                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'text' ? 'Copied' : 'Copy Text'}</span>
+                                </button>
+                                 <button
+                                    onClick={() => handleCopyFullMessage(msg.parts[0].text, index, 'markdown')}
+                                    className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                                    aria-label="Copy message as Markdown"
+                                >
+                                    {copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? (
+                                        <CheckIcon className="w-3.5 h-3.5 text-green-500" />
+                                    ) : (
+                                        <CopyIcon className="w-3.5 h-3.5" />
+                                    )}
+                                    <span className="text-xs">{copiedMessage?.index === index && copiedMessage?.type === 'markdown' ? 'Copied' : 'Copy Markdown'}</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {msg.role === 'user' && <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center"><UserIcon className="w-5 h-5" /></div>}
+              </div>
+        )})}
          {isLoading && messages[messages.length - 1]?.role === 'user' && (
-             <div className="flex gap-3">
+             <div className="flex gap-3 p-2">
                 <div className="w-8 h-8 flex-shrink-0 rounded-full bg-primary-500 flex items-center justify-center"><BotIcon className="w-5 h-5 text-white" /></div>
                 <div className="max-w-xl p-3 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center">
                     <div className="w-2 h-2 bg-primary-400 rounded-full animate-pulse mr-1.5"></div>
