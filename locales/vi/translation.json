@@ -94,6 +94,8 @@
   },
   "tabs": {
     "playground": "Sân chơi",
-    "notes": "Ghi chú"
+    "notes": "Ghi chú",
+    "chat": "Trò chuyện",
+    "tools": "Công cụ"
   }
 }

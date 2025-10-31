@@ -59,17 +59,17 @@ const UserMenu: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogo
 const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, points, user, onLogin, onLogout }) => {
   const { t } = useTranslation();
   return (
-    <header className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
-      <div className="flex items-center gap-4">
+    <header className="flex items-center justify-between p-2 md:p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm flex-shrink-0">
+      <div className="flex items-center gap-2 md:gap-4">
          <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
           <MenuIcon className="w-6 h-6"/>
         </button>
         <div className="flex items-center gap-2">
             <CodeIcon className="w-8 h-8 text-primary-600"/>
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">{t('header.title')}</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-white hidden sm:block">{t('header.title')}</h1>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-300 font-bold py-1 px-3 rounded-full">
             <StarIcon className="w-5 h-5"/>
             <span>{points}</span>
@@ -91,10 +91,10 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, toggleSidebar, poin
         ) : (
             <button
                 onClick={onLogin}
-                className="flex items-center gap-2 p-2 px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold"
+                className="flex items-center gap-2 p-2 sm:px-4 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold"
             >
                 <LoginIcon className="w-5 h-5" />
-                <span>{t('header.login')}</span>
+                <span className="hidden sm:inline">{t('header.login')}</span>
             </button>
         )}
       </div>

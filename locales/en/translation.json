@@ -94,6 +94,8 @@
   },
   "tabs": {
     "playground": "Playground",
-    "notes": "Notes"
+    "notes": "Notes",
+    "chat": "Chat",
+    "tools": "Tools"
   }
 }
