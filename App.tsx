@@ -63,9 +63,9 @@ const App: React.FC = () => {
   
   // View mode state
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
-  const [activeMobileView, setActiveMobileView] = useState<'chat' | 'tools'>('chat');
+  const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: The getInitialState function was called without the required 'pathId' argument, leading to an error. Provided 'js-basics' as a default argument to correctly initialize the application state.
+  // Fix: The getInitialState function was called without the required 'pathId' argument, leading to an error. Provided 'js-basics' as a default argument to correctly initialize the application state.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -539,7 +539,7 @@ const App: React.FC = () => {
   const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
     setActiveView('learningPath');
     setActiveLessonId(item.id);
-    setActiveMobileView('chat');
+    setActiveMainView('chat');
 
     const history = learningPathHistories[item.id] || [];
     
@@ -617,7 +617,7 @@ const App: React.FC = () => {
         setCustomProjects(prev => [...prev, newProject]);
         setActiveCustomProjectId(newProject.id);
         setActiveView('customProject');
-        setActiveMobileView('chat');
+        setActiveMainView('chat');
         
         const kickstartPrompt = `Start a new custom project with me.
         My project is called: "${name}"
@@ -652,7 +652,7 @@ const App: React.FC = () => {
   const handleSelectCustomProject = useCallback((projectId: string) => {
     setActiveCustomProjectId(projectId);
     setActiveView('customProject');
-    setActiveMobileView('chat');
+    setActiveMainView('chat');
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, []);
 
@@ -844,33 +844,33 @@ const App: React.FC = () => {
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           {!user && (
-            <div className="bg-primary-100 dark:bg-primary-900/50 border border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200 px-4 py-2 rounded-lg text-sm text-center">
+            <div className="flex-shrink-0 bg-primary-100 dark:bg-primary-900/50 border border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200 px-4 py-2 rounded-lg text-sm text-center">
               <Trans i18nKey="guestModeMessage">
                 You are in guest mode. <button onClick={handleLogin} className="font-bold underline hover:text-primary-600 dark:hover:text-primary-300">Login</button> to save your progress.
               </Trans>
             </div>
           )}
 
-           {/* Mobile View Toggler */}
-          <div className="md:hidden flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
+           {/* Main View Toggler */}
+          <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <button 
-                onClick={() => setActiveMobileView('chat')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeMobileView === 'chat' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                onClick={() => setActiveMainView('chat')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeMainView === 'chat' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
                 <ChatBubbleIcon className="w-5 h-5"/> {t('tabs.chat')}
               </button>
               <button 
-                onClick={() => setActiveMobileView('tools')}
-                 className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeMobileView === 'tools' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                onClick={() => setActiveMainView('tools')}
+                 className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeMainView === 'tools' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
                 <CodeIcon className="w-5 h-5"/> {t('tabs.tools')}
               </button>
             </div>
           </div>
 
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
-            <div className={`flex flex-col min-h-0 ${activeMobileView === 'chat' ? 'flex' : 'hidden'} md:flex`}>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className={`flex-1 flex flex-col min-h-0 ${activeMainView === 'chat' ? 'flex' : 'hidden'}`}>
               <ChatInterface 
                 messages={messages} 
                 onSendMessage={handleSendMessage} 
@@ -884,7 +884,7 @@ const App: React.FC = () => {
                 onClearError={() => setChatError(null)}
               />
             </div>
-            <div className={`flex flex-col min-h-0 ${activeMobileView === 'tools' ? 'flex' : 'hidden'} md:flex`}>
+            <div className={`flex-1 flex flex-col min-h-0 ${activeMainView === 'tools' ? 'flex' : 'hidden'}`}>
               <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 mb-2">
                 <div className="flex items-center">
                   <button 

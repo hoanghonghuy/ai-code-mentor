@@ -1,10 +1,10 @@
-
-
-
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
 import { useTranslation } from 'react-i18next';
+
+// Add hljs to the window object for TypeScript
+declare const hljs: any;
 
 interface CodePlaygroundProps {
   onFirstRun: () => void;
@@ -48,14 +48,31 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const hasRunOnce = useRef(false);
+  const codeRef = useRef<HTMLElement>(null);
+  const preRef = useRef<HTMLPreElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const ai = useMemo(() => {
-    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
+    // FIX: Switched from \`import.meta.env.VITE_API_KEY\` to \`process.env.API_KEY\` to align with coding guidelines and fix TypeScript error.
     if (process.env.API_KEY) {
       return new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
     return null;
   }, []);
+
+  useEffect(() => {
+    if (codeRef.current) {
+        codeRef.current.innerHTML = hljs.highlight(code, { language, ignoreIllegals: true }).value;
+    }
+  }, [code, language]);
+
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+      if (preRef.current) {
+          preRef.current.scrollTop = e.currentTarget.scrollTop;
+          preRef.current.scrollLeft = e.currentTarget.scrollLeft;
+      }
+  };
+
 
   const handleLanguageChange = (lang: SupportedLanguage) => {
     setLanguage(lang);
@@ -118,12 +135,21 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
         </button>
       </div>
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 relative">
+        <div className="flex-1 relative bg-gray-50 dark:bg-gray-900">
+            <pre 
+                ref={preRef}
+                aria-hidden="true" 
+                className="absolute inset-0 p-4 font-mono text-sm overflow-auto z-0"
+            >
+                <code ref={codeRef} className={`language-${language}`}></code>
+            </pre>
             <textarea
+                ref={textareaRef}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                onScroll={handleScroll}
                 placeholder="Enter your code here"
-                className="w-full h-full p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border-0 focus:ring-0 resize-none"
+                className="absolute inset-0 p-4 font-mono text-sm bg-transparent text-transparent caret-black dark:caret-white border-0 focus:ring-0 resize-none z-10"
                 spellCheck="false"
             />
         </div>
