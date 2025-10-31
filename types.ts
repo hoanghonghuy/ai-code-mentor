@@ -1,5 +1,4 @@
 import { Chat } from "@google/genai";
-import type { ElementType } from 'react';
 import type { User } from 'firebase/auth';
 
 export { User };

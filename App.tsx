@@ -415,12 +415,35 @@ const App: React.FC = () => {
       
       if (!idToSave) return;
 
-      // The data in finalMessages is now clean because it was built from clean state updates.
-      // No extra cleaning step is needed here.
+      // Deep-clone and sanitize messages before saving to state to prevent circular reference errors.
+      const cleanFinalMessages = finalMessages.map(msg => {
+        const cleanMsg: ChatMessage = {
+          role: msg.role,
+          parts: msg.parts.map(p => ({ text: p.text })),
+        };
+      
+        if (msg.groundingChunks) {
+          const cleanChunks = msg.groundingChunks
+            .map(gc => ({
+              web: {
+                uri: gc.web?.uri,
+                title: gc.web?.title,
+              }
+            }))
+            .filter(gc => gc.web && gc.web.uri);
+          
+          if (cleanChunks.length > 0) {
+            cleanMsg.groundingChunks = cleanChunks;
+          }
+        }
+      
+        return cleanMsg;
+      });
+
       if (viewToSave === 'learningPath') {
-        setLearningPathHistories(prev => ({ ...prev, [idToSave]: finalMessages }));
+        setLearningPathHistories(prev => ({ ...prev, [idToSave]: cleanFinalMessages }));
       } else if (viewToSave === 'customProject') {
-        setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: finalMessages } : p));
+        setCustomProjects(prev => prev.map(p => p.id === idToSave ? { ...p, chatHistory: cleanFinalMessages } : p));
       }
     }
   }, [messages, createChatInstance, activeView, activeCustomProjectId, activeLessonId, t]);
