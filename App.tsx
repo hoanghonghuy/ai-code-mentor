@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -30,7 +31,8 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
 
 const getInitialLearningPath = (pathId: LearningPathId): LearningPath => JSON.parse(JSON.stringify(learningPaths[pathId]));
 
-const getInitialState = (pathId: LearningPathId = 'js-basics') => {
+// FIX: Removed default parameter to make the function contract explicit and prevent potential issues with build environments that may not correctly handle default parameters in this context.
+const getInitialState = (pathId: LearningPathId) => {
   const path = getInitialLearningPath(pathId);
   return {
     activePathId: pathId,
@@ -64,7 +66,6 @@ const App: React.FC = () => {
   // View mode state
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
 
-  // FIX: Explicitly pass the default value to getInitialState to resolve the "Expected 1 arguments, but got 0" error.
   // Fix: Pass 'js-basics' to getInitialState to resolve the "Expected 1 arguments, but got 0" error.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   

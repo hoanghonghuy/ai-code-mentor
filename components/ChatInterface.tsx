@@ -241,7 +241,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
     }
   }, [messages, isSearchOpen]);
   
-   // Effect for real-time search
+   // Effect for real-time search with debouncing to prevent hangs
   useEffect(() => {
     if (!isSearchOpen) {
         setSearchResults([]);
@@ -249,21 +249,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
         return;
     }
 
-    if (searchQuery.trim() === '') {
-        setSearchResults([]);
-        setCurrentResultIndex(-1);
-        return;
-    }
+    // Debounce the search logic to avoid performance issues during message streaming
+    const handler = setTimeout(() => {
+      if (searchQuery.trim() === '') {
+          setSearchResults([]);
+          setCurrentResultIndex(-1);
+          return;
+      }
+      const results = messages
+          .map((msg, index) => 
+              msg.parts[0].text.toLowerCase().includes(searchQuery.toLowerCase()) ? index : -1
+          )
+          .filter(index => index !== -1);
+      
+      setSearchResults(results);
+      setCurrentResultIndex(results.length > 0 ? 0 : -1);
+    }, 300);
 
-    const results = messages
-        .map((msg, index) => 
-            msg.parts[0].text.toLowerCase().includes(searchQuery.toLowerCase()) ? index : -1
-        )
-        .filter(index => index !== -1);
-    
-    setSearchResults(results);
-    setCurrentResultIndex(results.length > 0 ? 0 : -1);
-
+    return () => clearTimeout(handler);
   }, [searchQuery, messages, isSearchOpen]);
 
   // Effect for scrolling to search result
@@ -373,7 +376,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                     <div className="w-full group">
                         <div className={`rounded-xl ${msg.role === 'user' ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>
                           <div className="p-3">
-                             <SimpleMarkdown text={msg.parts[0].text} searchQuery={isSearchOpen ? searchQuery : ''} />
+                            {msg.role === 'model' && index === messages.length - 1 && isLoading ? (
+                                <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                    <p>{msg.parts[0].text}<span className="inline-block w-2 h-4 bg-gray-800 dark:bg-gray-200 animate-pulse ml-1 align-bottom"></span></p>
+                                </div>
+                            ) : (
+                                <SimpleMarkdown text={msg.parts[0].text} searchQuery={isSearchOpen ? searchQuery : ''} />
+                            )}
                           </div>
                            {msg.groundingChunks && msg.groundingChunks.length > 0 && (
                             <div className="border-t border-gray-300 dark:border-gray-600 mt-2 p-3">
