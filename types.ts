@@ -5,7 +5,8 @@ export interface GroundingChunk {
   web?: {
     // FIX: made uri optional to match the type from @google/genai
     uri?: string;
-    title: string;
+    // FIX: made title optional to match the type from @google/genai
+    title?: string;
   };
 }
 

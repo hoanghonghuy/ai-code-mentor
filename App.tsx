@@ -71,7 +71,8 @@ const App: React.FC = () => {
     }
   }, [theme]);
   
-  // Effect to switch message history based on active view
+  // Effect to synchronize the displayed messages with the active chat history source.
+  // This ensures that switching between lessons or projects correctly loads the conversation.
   useEffect(() => {
       if (activeView === 'learningPath') {
           setMessages(learningPathHistories[activeLessonId || ''] || []);
@@ -210,11 +211,10 @@ const App: React.FC = () => {
   
   const handleSelectLesson = useCallback((item: Lesson | ProjectStep) => {
     setActiveView('learningPath');
-    setActiveLessonId(item.id);
+    setActiveLessonId(item.id); // This state change triggers the useEffect to load the correct chat history.
 
     const history = learningPathHistories[item.id] || [];
-    setMessages(history);
-
+    
     if (history.length === 0) {
         handleSendMessage(item.prompt, { isSystemMessage: true, initialHistory: [] });
     }
