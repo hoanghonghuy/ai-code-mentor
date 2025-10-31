@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
@@ -45,6 +46,7 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   const hasRunOnce = useRef(false);
 
   const ai = useMemo(() => {
+    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
     if (process.env.API_KEY) {
       return new GoogleGenAI({ apiKey: process.env.API_KEY });
     }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
@@ -83,6 +84,7 @@ const App: React.FC = () => {
 
 
   const ai = useMemo(() => {
+    // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
     if (process.env.API_KEY) {
       return new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
@@ -453,6 +455,7 @@ const App: React.FC = () => {
     );
   }
 
+  // FIX: Switched from `import.meta.env.VITE_API_KEY` to `process.env.API_KEY` to align with coding guidelines and fix TypeScript error.
   if (!process.env.API_KEY) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
