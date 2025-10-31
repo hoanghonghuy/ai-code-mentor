@@ -1,3 +1,4 @@
+
 {
   "loading": "Đang tải AI Code Mentor...",
   "apiKeyNotFound": "Không tìm thấy khóa API",
@@ -20,7 +21,12 @@
     "lessons": "Bài học",
     "achievements": "Thành tích",
     "settings": "Cài đặt",
-    "guidedProject": "DỰ ÁN HƯỚNG DẪN"
+    "guidedProject": "DỰ ÁN HƯỚNG DẪN",
+    "sortBy": "Sắp xếp theo",
+    "sort": {
+      "default": "Mặc định",
+      "priority": "Ưu tiên"
+    }
   },
   "chat": {
     "title": "Trò chuyện với Mentor AI",
@@ -33,7 +39,8 @@
     "copyMarkdown": "Sao chép Markdown",
     "copied": "Đã sao chép",
     "sources": "Nguồn",
-    "errorMessage": "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại."
+    "errorMessage": "Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.",
+    "clearHistory": "Xóa lịch sử trò chuyện"
   },
   "playground": {
     "title": "Sân chơi mã",
@@ -92,10 +99,22 @@
     "message": "Bạn có chắc chắn muốn xóa \"{{projectName}}\"? Hành động này không thể hoàn tác.",
     "confirm": "Xóa"
   },
+  "clearHistoryModal": {
+    "title": "Xóa Lịch sử Trò chuyện",
+    "message": "Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện cho phiên này không? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa Lịch sử"
+  },
   "tabs": {
     "playground": "Sân chơi",
     "notes": "Ghi chú",
     "chat": "Trò chuyện",
     "tools": "Công cụ"
+  },
+  "priority": {
+    "high": "Cao",
+    "medium": "Trung bình",
+    "low": "Thấp",
+    "none": "Không",
+    "set": "Đặt ưu tiên"
   }
 }

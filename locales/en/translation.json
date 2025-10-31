@@ -1,3 +1,4 @@
+
 {
   "loading": "Loading AI Code Mentor...",
   "apiKeyNotFound": "API Key Not Found",
@@ -20,7 +21,12 @@
     "lessons": "Lessons",
     "achievements": "Achievements",
     "settings": "Settings",
-    "guidedProject": "GUIDED PROJECT"
+    "guidedProject": "GUIDED PROJECT",
+    "sortBy": "Sort by",
+    "sort": {
+      "default": "Default",
+      "priority": "Priority"
+    }
   },
   "chat": {
     "title": "AI Mentor Chat",
@@ -33,7 +39,8 @@
     "copyMarkdown": "Copy Markdown",
     "copied": "Copied",
     "sources": "Sources",
-    "errorMessage": "Sorry, I encountered an error. Please try again."
+    "errorMessage": "Sorry, I encountered an error. Please try again.",
+    "clearHistory": "Clear chat history"
   },
   "playground": {
     "title": "Code Playground",
@@ -92,10 +99,22 @@
     "message": "Are you sure you want to delete \"{{projectName}}\"? This action cannot be undone.",
     "confirm": "Delete"
   },
+  "clearHistoryModal": {
+    "title": "Clear Chat History",
+    "message": "Are you sure you want to clear the entire chat history for this session? This action cannot be undone.",
+    "confirm": "Clear History"
+  },
   "tabs": {
     "playground": "Playground",
     "notes": "Notes",
     "chat": "Chat",
     "tools": "Tools"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "none": "None",
+    "set": "Set priority"
   }
 }

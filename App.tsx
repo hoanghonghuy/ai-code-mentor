@@ -1,7 +1,8 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
@@ -65,9 +66,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMobileView, setActiveMobileView] = useState<'chat' | 'tools'>('chat');
 
-  // Fix: The getInitialState function requires a `pathId` argument to determine which learning path to load.
-  // It was being called without an argument, causing a "Expected 1 arguments, but got 0" error.
-  // Passing 'js-basics' as a default ensures the application initializes correctly.
+  // Fix: The getInitialState function requires a `pathId` argument. It was called without one, causing a "Expected 1 arguments, but got 0" error. Passing 'js-basics' as a default ensures correct initialization.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -82,6 +81,7 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<CustomProject | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
+  const [historyToClear, setHistoryToClear] = useState<{ view: 'learningPath' | 'customProject', id: string } | null>(null);
 
 
   // Gamification State
@@ -356,6 +356,29 @@ const App: React.FC = () => {
     setCustomDocs(prev => prev.filter((_, index) => index !== indexToRemove));
   }, []);
 
+  const handleSetPriority = useCallback((itemId: string, priority: Priority) => {
+    setLearningPath(currentPath => {
+        const newPath = JSON.parse(JSON.stringify(currentPath));
+        for (const module of newPath.modules) {
+            if (module.lessons) {
+                const lesson = module.lessons.find((l: Lesson) => l.id === itemId);
+                if (lesson) {
+                    lesson.priority = priority;
+                    return newPath;
+                }
+            }
+            if (module.project?.steps) {
+                const step = module.project.steps.find((s: ProjectStep) => s.id === itemId);
+                if (step) {
+                    step.priority = priority;
+                    return newPath;
+                }
+            }
+        }
+        return newPath;
+    });
+  }, []);
+
   const handleSendMessage = useCallback(async (
     message: string,
     { 
@@ -594,6 +617,61 @@ const App: React.FC = () => {
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, []);
 
+  const handleInitiateClearHistory = useCallback(() => {
+    const view = activeView;
+    const id = view === 'learningPath' ? activeLessonId : activeCustomProjectId;
+    if (id && messages.length > 0) {
+        setHistoryToClear({ view, id });
+    }
+  }, [activeView, activeLessonId, activeCustomProjectId, messages]);
+
+  const handleConfirmClearHistory = useCallback(() => {
+    if (!historyToClear) return;
+
+    const { view, id } = historyToClear;
+    chatSessionRef.current = null; // Force recreation of chat session
+
+    if (view === 'learningPath') {
+        setLearningPathHistories(prev => {
+            const newHistories = { ...prev };
+            delete newHistories[id];
+            return newHistories;
+        });
+
+        const item = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === id);
+        if (item) {
+            setMessages([]);
+            handleSendMessage(item.prompt, {
+                isSystemMessage: true,
+                initialHistory: [],
+                targetId: item.id,
+                targetView: 'learningPath'
+            });
+        }
+    } else if (view === 'customProject') {
+        const project = customProjects.find(p => p.id === id);
+        if (project) {
+            setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, chatHistory: [] } : p));
+
+            const kickstartPrompt = `Start a new custom project with me.
+            My project is called: "${project.name}"
+            My main goal is: "${project.goal}"
+            
+            First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
+            
+            setMessages([]);
+            handleSendMessage(kickstartPrompt, {
+                isSystemMessage: true,
+                initialHistory: [],
+                targetId: project.id,
+                targetView: 'customProject'
+            });
+        }
+    }
+
+    setHistoryToClear(null);
+  }, [historyToClear, learningPath, customProjects, handleSendMessage]);
+
   const activeLesson = useMemo(() => {
     if (!activeLessonId) return null;
     return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
@@ -648,6 +726,7 @@ const App: React.FC = () => {
           onSelectPath={handleSelectPath}
           bookmarkedLessonIds={bookmarkedLessonIds}
           onToggleBookmark={handleToggleBookmark}
+          onSetPriority={handleSetPriority}
           customDocs={customDocs}
           onAddDoc={handleAddCustomDoc}
           onRemoveDoc={handleRemoveCustomDoc}
@@ -692,7 +771,12 @@ const App: React.FC = () => {
 
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
             <div className={`flex flex-col min-h-0 ${activeMobileView === 'chat' ? 'flex' : 'hidden'} md:flex`}>
-              <ChatInterface messages={messages} onSendMessage={handleSendMessage} isLoading={isLoading} />
+              <ChatInterface 
+                messages={messages} 
+                onSendMessage={handleSendMessage} 
+                isLoading={isLoading} 
+                onClearHistory={handleInitiateClearHistory}
+              />
             </div>
             <div className={`flex flex-col min-h-0 ${activeMobileView === 'tools' ? 'flex' : 'hidden'} md:flex`}>
               <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 mb-2">
@@ -744,6 +828,15 @@ const App: React.FC = () => {
             onConfirm={handleDeleteCustomProject}
             onClose={() => setProjectToDelete(null)}
             confirmText={t('deleteProjectModal.confirm')}
+        />
+      )}
+      {historyToClear && (
+        <ConfirmationModal
+            title={t('clearHistoryModal.title')}
+            message={t('clearHistoryModal.message')}
+            onConfirm={handleConfirmClearHistory}
+            onClose={() => setHistoryToClear(null)}
+            confirmText={t('clearHistoryModal.confirm')}
         />
       )}
     </div>

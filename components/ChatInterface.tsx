@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon } from './icons';
+import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon } from './icons';
 import { useTranslation } from 'react-i18next';
 
 // Add hljs to the window object for TypeScript
@@ -10,6 +11,7 @@ interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  onClearHistory: () => void;
 }
 
 const CodeBlock: React.FC<{ language: string; code: string; onCopy: () => void; copied: boolean; }> = ({ language, code, onCopy, copied }) => {
@@ -215,7 +217,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
 };
 
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory }) => {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -326,13 +328,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold">{t('chat.title')}</h2>
-        <button
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClearHistory}
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={t('chat.clearHistory')}
+            disabled={isLoading || messages.length === 0}
+            title={t('chat.clearHistory')}
+          >
+              <TrashIcon className="w-5 h-5" />
+          </button>
+          <button
             onClick={handleToggleSearch}
             className={`p-2 rounded-md ${isSearchOpen ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
             aria-label="Search messages"
           >
             <SearchIcon className="w-5 h-5" />
           </button>
+        </div>
       </div>
        {isSearchOpen && (
         <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">

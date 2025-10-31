@@ -18,11 +18,14 @@ export interface ChatMessage {
   groundingChunks?: GroundingChunk[];
 }
 
+export type Priority = 'high' | 'medium' | 'low' | 'none';
+
 export interface Lesson {
   id: string;
   title: string;
   prompt: string;
   completed: boolean;
+  priority: Priority;
 }
 
 export interface ProjectStep {
@@ -30,6 +33,7 @@ export interface ProjectStep {
   title: string;
   prompt: string;
   completed: boolean;
+  priority: Priority;
 }
 
 export interface Project {

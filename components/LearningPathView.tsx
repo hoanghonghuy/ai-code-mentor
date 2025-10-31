@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep, CustomProject } from '../types';
-import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon } from './icons';
+import React, { useState, useMemo } from 'react';
+import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep, CustomProject, Priority } from '../types';
+import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon, FlagIcon } from './icons';
 import AchievementsView from './AchievementsView';
 import SettingsView from './SettingsView';
 import CustomProjectView from './CustomProjectView';
@@ -20,6 +20,7 @@ interface LearningPathProps {
   onSelectPath: (pathId: LearningPathId) => void;
   bookmarkedLessonIds: string[];
   onToggleBookmark: (lessonId: string) => void;
+  onSetPriority: (itemId: string, priority: Priority) => void;
   customDocs: string[];
   onAddDoc: (url: string) => void;
   onRemoveDoc: (index: number) => void;
@@ -42,19 +43,125 @@ const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
     </div>
 );
 
+const PriorityIndicator: React.FC<{ priority: Priority }> = ({ priority }) => {
+    const { t } = useTranslation();
+    if (priority === 'none') return null;
+
+    const colors: Record<Priority, string> = {
+        high: 'bg-red-500',
+        medium: 'bg-yellow-500',
+        low: 'bg-blue-500',
+        none: '',
+    };
+    const tooltips: Record<Priority, string> = {
+        high: t('priority.high'),
+        medium: t('priority.medium'),
+        low: t('priority.low'),
+        none: '',
+    };
+
+    return (
+        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0`} style={{ backgroundColor: colors[priority].replace('bg-','') }} title={tooltips[priority]}></div>
+    );
+};
+
+
 interface ModuleViewProps {
     module: LearningModule;
     onSelectLesson: (item: Lesson | ProjectStep) => void;
     activeLessonId: string | null;
     bookmarkedLessonIds: string[];
     onToggleBookmark: (lessonId: string) => void;
+    onSetPriority: (itemId:string, priority: Priority) => void;
     showOnlyBookmarked: boolean;
     isLoading: boolean;
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, showOnlyBookmarked, isLoading }) => {
+const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, onSetPriority, showOnlyBookmarked, isLoading }) => {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = React.useState(true);
+    const [priorityMenuOpenFor, setPriorityMenuOpenFor] = useState<string | null>(null);
+
+    const PriorityMenu: React.FC<{ item: Lesson | ProjectStep }> = ({ item }) => {
+        const priorities: Priority[] = ['high', 'medium', 'low', 'none'];
+        const priorityLabels: Record<Priority, string> = {
+            high: t('priority.high'),
+            medium: t('priority.medium'),
+            low: t('priority.low'),
+            none: t('priority.none'),
+        };
+        const priorityColors: Record<Priority, string> = {
+            high: 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20',
+            medium: 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20',
+            low: 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20',
+            none: 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+        };
+
+        return (
+            <div 
+                className="absolute right-full mr-1 top-1/2 -translate-y-1/2 w-32 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-10"
+                onMouseLeave={() => setPriorityMenuOpenFor(null)}
+            >
+                {priorities.map(p => (
+                    <button
+                        key={p}
+                        onClick={() => {
+                            onSetPriority(item.id, p);
+                            setPriorityMenuOpenFor(null);
+                        }}
+                        className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${priorityColors[p]}`}
+                    >
+                        <PriorityIndicator priority={p} />
+                        {priorityLabels[p]}
+                    </button>
+                ))}
+            </div>
+        );
+    };
+
+    const renderItemList = (items: (Lesson | ProjectStep)[]) => (
+        <ul className="space-y-1 ml-2">
+            {items.map(item => {
+                const isActive = activeLessonId === item.id;
+                const isCompleted = item.completed;
+                const isBookmarked = bookmarkedLessonIds.includes(item.id);
+                return (
+                    <li key={item.id} className="pl-2 group flex items-center">
+                        <button
+                            onClick={() => onSelectLesson(item)}
+                            disabled={isLoading}
+                            className={`flex-1 text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                isActive 
+                                ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 font-semibold' 
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-primary-500/10'
+                            }`}
+                        >
+                            {isCompleted ? <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0"/> : <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />}
+                            <PriorityIndicator priority={item.priority} />
+                            <span className={`${isCompleted && !isActive ? 'line-through text-gray-500' : ''} truncate`}>{item.title}</span>
+                        </button>
+                        <div className="flex items-center shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity relative">
+                             <button 
+                              onClick={() => setPriorityMenuOpenFor(prev => prev === item.id ? null : item.id)} 
+                              className={`p-1 rounded-md ${priorityMenuOpenFor === item.id ? 'opacity-100' : ''} ${item.priority !== 'none' ? 'text-primary-500' : 'text-gray-400 hover:text-gray-600'}`}
+                              aria-label={t('priority.set')}
+                            >
+                                <FlagIcon className={`w-4 h-4 ${item.priority !== 'none' ? 'fill-current' : ''}`} />
+                            </button>
+                            <button 
+                              onClick={() => onToggleBookmark(item.id)} 
+                              className={`p-1 rounded-md ${isBookmarked ? 'opacity-100 text-yellow-500' : 'text-gray-400 hover:text-gray-600'}`}
+                              aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+                            >
+                                <BookmarkIcon className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                            </button>
+                            {priorityMenuOpenFor === item.id && <PriorityMenu item={item} />}
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
+    );
     
     if (module.project) {
         const project = module.project;
@@ -84,36 +191,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
                             <span className="text-xs font-medium text-gray-500">{Math.round(progress)}%</span>
                             <ProgressBar value={progress} />
                         </div>
-                        <ul className="space-y-1 ml-2">
-                            {stepsToShow.map(step => {
-                                const isActive = activeLessonId === step.id;
-                                const isCompleted = step.completed;
-                                const isBookmarked = bookmarkedLessonIds.includes(step.id);
-                                return (
-                                    <li key={step.id} className="pl-2 group flex items-center">
-                                        <button
-                                            onClick={() => onSelectLesson(step)}
-                                            disabled={isLoading}
-                                            className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                                isActive 
-                                                ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 font-semibold' 
-                                                : 'text-gray-600 dark:text-gray-400 hover:bg-primary-500/10'
-                                            }`}
-                                        >
-                                            {isCompleted ? <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0"/> : <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />}
-                                            <span className={isCompleted && !isActive ? 'line-through text-gray-500' : ''}>{step.title}</span>
-                                        </button>
-                                        <button 
-                                          onClick={() => onToggleBookmark(step.id)} 
-                                          className={`p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity ${isBookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-gray-600'}`}
-                                          aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                                        >
-                                            <BookmarkIcon className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                        {renderItemList(stepsToShow)}
                      </div>
                 )}
             </div>
@@ -141,38 +219,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
                         <span className="text-xs font-medium text-gray-500">{Math.round(progress)}%</span>
                         <ProgressBar value={progress} />
                     </div>
-                    <ul className="space-y-1 border-l border-gray-200 dark:border-gray-700 ml-2">
-                        {lessonsToShow.map(lesson => {
-                            const isActive = activeLessonId === lesson.id;
-                            const isCompleted = lesson.completed;
-                            const isBookmarked = bookmarkedLessonIds.includes(lesson.id);
-                            return (
-                                <li key={lesson.id} className="pl-2 group flex items-center">
-                                    <button
-                                        onClick={() => onSelectLesson(lesson)}
-                                        disabled={isLoading}
-                                        className={`w-full text-left p-2 text-sm rounded-md transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                            isActive 
-                                            ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 font-semibold' 
-                                            : isCompleted 
-                                            ? 'text-gray-500 dark:text-gray-400 hover:bg-primary-500/10' 
-                                            : 'text-gray-600 dark:text-gray-400 hover:bg-primary-500/10'
-                                        }`}
-                                    >
-                                        {isCompleted ? <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0"/> : <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />}
-                                        <span className={isCompleted && !isActive ? 'line-through' : ''}>{lesson.title}</span>
-                                    </button>
-                                     <button 
-                                      onClick={() => onToggleBookmark(lesson.id)} 
-                                      className={`p-1 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity ${isBookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-gray-600'}`}
-                                      aria-label={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
-                                    >
-                                        <BookmarkIcon className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                                    </button>
-                                </li>
-                            )
-                        })}
-                    </ul>
+                    <div className="border-l border-gray-200 dark:border-gray-700">
+                      {renderItemList(lessonsToShow)}
+                    </div>
                  </div>
             )}
         </div>
@@ -181,13 +230,40 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const { t } = useTranslation();
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
+  const [sortBy, setSortBy] = useState<'default' | 'priority'>('default');
   
   const allItems = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
   const completedItems = allItems.filter(item => item.completed).length;
   const overallProgress = allItems.length > 0 ? (completedItems / allItems.length) * 100 : 0;
+
+  const priorityOrder: Record<Priority, number> = {
+    'high': 0,
+    'medium': 1,
+    'low': 2,
+    'none': 3
+  };
+
+  const sortedModules = useMemo(() => {
+    if (sortBy === 'default') {
+        return learningPath.modules;
+    }
+
+    const sorted = JSON.parse(JSON.stringify(learningPath.modules));
+    
+    sorted.forEach((module: LearningModule) => {
+        if (module.lessons) {
+            module.lessons.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+        }
+        if (module.project?.steps) {
+            module.project.steps.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+        }
+    });
+
+    return sorted;
+  }, [learningPath.modules, sortBy]);
 
   const TabButton: React.FC<{tabId: 'lessons' | 'achievements' | 'settings', children: React.ReactNode}> = ({ tabId, children }) => (
     <button
@@ -259,7 +335,7 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                     <div className="flex-1 p-4 overflow-y-auto">
                         {activeTab === 'lessons' && (
                             <div>
-                                <div className="flex items-center justify-end mb-4">
+                                <div className="flex items-center justify-between mb-4">
                                     <label className="flex items-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
                                         <input 
                                             type="checkbox" 
@@ -269,8 +345,20 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                                         />
                                         <span className="ml-2">{t('sidebar.showBookmarkedOnly')}</span>
                                     </label>
+                                     <div>
+                                        <label htmlFor="sort-by" className="text-xs text-gray-600 dark:text-gray-400 mr-2">{t('sidebar.sortBy')}</label>
+                                        <select
+                                            id="sort-by"
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value as 'default' | 'priority')}
+                                            className="p-1 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                        >
+                                            <option value="default">{t('sidebar.sort.default')}</option>
+                                            <option value="priority">{t('sidebar.sort.priority')}</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                {learningPath.modules.map((module, index) => (
+                                {sortedModules.map((module, index) => (
                                     <ModuleView 
                                         key={index} 
                                         module={module} 
@@ -278,6 +366,7 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                                         activeLessonId={activeLessonId}
                                         bookmarkedLessonIds={bookmarkedLessonIds}
                                         onToggleBookmark={onToggleBookmark}
+                                        onSetPriority={onSetPriority}
                                         showOnlyBookmarked={showOnlyBookmarked}
                                         isLoading={isLoading}
                                     />
