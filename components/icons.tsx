@@ -147,6 +147,13 @@ export const FolderIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+export const FolderOpenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v1"></path>
+    </svg>
+);
+
+
 export const FileIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
@@ -225,7 +232,6 @@ export const ChatBubbleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     </svg>
 );
 
-// FIX: Added FilesIcon component to be used in the main App view for the Code Editor tab.
 export const FilesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
@@ -260,4 +266,75 @@ const iconMap: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
 
 export const getIcon = (name: string): React.FC<React.SVGProps<SVGSVGElement>> => {
     return iconMap[name] || CodeIcon; // Default to CodeIcon if not found
+};
+
+const FileHtmlIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M4 21V3L14 3L14 7L20 7L20 21L4 21Z" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 3L20 7" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 18V12" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 15H12" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 12V18" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M16 12L15 18L14 12" stroke="#e34f26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
+const FileCssIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M4 21V3L14 3L14 7L20 7L20 21L4 21Z" stroke="#1572b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 3L20 7" stroke="#1572b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M16 12L14 13L16 14" stroke="#1572b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 18L12 17L10 16" stroke="#1572b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M13 14.5L11 15.5" stroke="#1572b6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
+const FileJsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M4 21V3L14 3L14 7L20 7L20 21L4 21Z" stroke="#f7df1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 3L20 7" stroke="#f7df1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10.5 15.5C10.5 16.6046 9.60457 17.5 8.5 17.5C7.39543 17.5 6.5 16.6046 6.5 15.5C6.5 14.3954 7.39543 13.5 8.5 13.5C9.098 13.5 9.63733 13.7663 10 14.1956" stroke="#f7df1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17.5 12.5C17.5 13.6046 16.6046 14.5 15.5 14.5C14.3954 14.5 13.5 13.6046 13.5 12.5C13.5 11.3954 14.3954 10.5 15.5 10.5C16.6046 10.5 17.5 11.3954 17.5 12.5Z" stroke="#f7df1e" strokeWidth="2"/>
+    </svg>
+);
+
+const FileJsonIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M4 21V3L14 3L14 7L20 7L20 21L4 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 3L20 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M10 12C11.1046 12 12 11.1046 12 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M14 18C12.8954 18 12 17.1046 12 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M12 16V10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+);
+
+const FilePythonIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M4 21V3L14 3L14 7L20 7L20 21L4 21Z" stroke="#3776ab" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 3L20 7" stroke="#3776ab" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 12V18" stroke="#3776ab" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M9 14H12" stroke="#3776ab" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M15 12V18" stroke="#3776ab" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+);
+
+const fileIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
+    html: (p) => <FileHtmlIcon {...p} />,
+    css: (p) => <FileCssIcon {...p} />,
+    js: (p) => <FileJsIcon {...p} />,
+    jsx: (p) => <FileJsIcon {...p} />,
+    ts: (p) => <FileJsIcon {...p} style={{ stroke: '#3178c6' }}/>,
+    tsx: (p) => <FileJsIcon {...p} style={{ stroke: '#3178c6' }}/>,
+    json: (p) => <FileJsonIcon {...p} className="text-gray-500" />,
+    py: (p) => <FilePythonIcon {...p} />,
+    // Add more here
+};
+
+
+export const getIconForFile = (filename: string, isFolder: boolean, isOpen: boolean = false) => {
+    if (isFolder) {
+        return isOpen ? FolderOpenIcon : FolderIcon;
+    }
+    const extension = filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
+    return fileIcons[extension] || FileIcon;
 };

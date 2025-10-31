@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile } from './types';
@@ -86,7 +88,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: The getInitialState function was called without the required 'pathId' argument. Provided 'js-basics' as a default argument to correctly initialize the application state.
+  // FIX: Called getInitialState without the required pathId argument. Provided 'js-basics' as a default to ensure correct initialization.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -626,6 +628,63 @@ const App: React.FC = () => {
     setNodeToDelete(null);
   }, [nodeToDelete, projectFiles, openFileIds, activeFileId]);
   
+  const handleMoveNode = useCallback((draggedNodeId: string, targetFolderId: string | null) => {
+      setProjectFiles(currentFiles => {
+          let draggedNode: FileSystemNode | null = null;
+          
+          // Check for invalid move: dropping a folder into itself or its descendant
+          let p = targetFolderId;
+          while (p) {
+              if (p === draggedNodeId) {
+                  console.error("Cannot move a folder into itself or a child.");
+                  return currentFiles;
+              }
+              p = findNodeAndParent(currentFiles, p)?.parent?.id ?? null;
+          }
+
+          // Recursive function to remove the node from its original location
+          const removeNode = (nodes: FileSystemNode[]): FileSystemNode[] => {
+              const filteredNodes: FileSystemNode[] = [];
+              for (const node of nodes) {
+                  if (node.id === draggedNodeId) {
+                      draggedNode = { ...node, parentId: targetFolderId };
+                  } else {
+                      if (node.type === 'folder') {
+                          node.children = removeNode(node.children);
+                      }
+                      filteredNodes.push(node);
+                  }
+              }
+              return filteredNodes;
+          };
+
+          let newFiles = removeNode(JSON.parse(JSON.stringify(currentFiles)));
+
+          if (!draggedNode) {
+              return currentFiles; // Node not found, something went wrong
+          }
+
+          // Recursive function to add the node to the new location
+          const addNode = (nodes: FileSystemNode[]): FileSystemNode[] => {
+              if (targetFolderId === null) {
+                  // Dropping at the root
+                  return [...nodes, draggedNode!];
+              }
+              return nodes.map(node => {
+                  if (node.id === targetFolderId && node.type === 'folder') {
+                      return { ...node, children: [...node.children, draggedNode!] };
+                  }
+                  if (node.type === 'folder') {
+                      return { ...node, children: addNode(node.children) };
+                  }
+                  return node;
+              });
+          };
+
+          return addNode(newFiles);
+      });
+  }, []);
+
   const serializeProject = (nodes: FileSystemNode[], indent = ''): string => {
     return nodes.map(node => {
         if (node.type === 'file') {
@@ -1191,6 +1250,7 @@ ${projectStructure}`;
                     onCreateFolder={handleCreateFolder}
                     onRenameNode={handleRenameNode}
                     onDeleteNode={handleDeleteNode}
+                    onMoveNode={handleMoveNode}
                   />
                 )}
                 {activeRightTab === 'playground' && <CodePlayground onFirstRun={handleFirstCodeRun} />}

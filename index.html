@@ -69,6 +69,42 @@
       html.dark {
         scrollbar-color: #6b7280 #374151;
       }
+
+      /* Drag and Drop styles */
+      .dragging {
+        opacity: 0.5;
+      }
+      .drag-over-folder {
+        background-color: rgba(59, 130, 246, 0.2); /* bg-blue-500/20 */
+        outline: 1px dashed #3b82f6; /* blue-500 */
+      }
+
+      /* Tree connector lines */
+      .tree-node-container {
+        position: relative;
+      }
+      .tree-connector {
+        position: absolute;
+        left: calc(0.5rem - 1px); /* Aligns with center of icons */
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background-color: #e5e7eb; /* gray-200 */
+      }
+      .dark .tree-connector {
+        background-color: #4b5563; /* gray-600 */
+      }
+      .tree-branch {
+        position: absolute;
+        left: calc(0.5rem - 1px);
+        top: 50%;
+        height: 1px;
+        width: 0.75rem; /* Extends to the icon */
+        background-color: #e5e7eb;
+      }
+      .dark .tree-branch {
+        background-color: #4b5563;
+      }
     </style>
   <script type="importmap">
 {

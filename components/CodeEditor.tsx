@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FileSystemNode, ProjectFile, ProjectFolder } from '../types';
-import { PlayIcon, FolderIcon, FileIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon } from './icons';
+import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile } from './icons';
 import { useTranslation } from 'react-i18next';
 
 // Add hljs to the window object for TypeScript
@@ -22,7 +23,21 @@ interface CodeEditorProps {
     onCreateFolder: (parentId: string | null) => void;
     onRenameNode: (nodeId: string, newName: string) => void;
     onDeleteNode: (nodeId: string) => void;
+    onMoveNode: (draggedNodeId: string, targetFolderId: string | null) => void;
 }
+
+const findFileInTree = (nodes: FileSystemNode[], fileId: string | null): ProjectFile | undefined => {
+    if (!fileId) return undefined;
+    const stack: FileSystemNode[] = [...nodes];
+    while(stack.length) {
+        const node = stack.pop();
+        if(!node) continue;
+        if(node.type === 'file' && node.id === fileId) return node;
+        if(node.type === 'folder') stack.push(...node.children);
+    }
+    return undefined;
+};
+
 
 const getFileExtension = (filename: string) => {
     return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
@@ -106,13 +121,15 @@ interface FileTreeNodeProps {
   renamingNodeId: string | null;
   onRenameNode: (nodeId: string, newName: string) => void;
   setRenamingNodeId: (id: string | null) => void;
+  onMoveNode: (draggedNodeId: string, targetFolderId: string | null) => void;
 }
 
-const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, onContextMenu, renamingNodeId, onRenameNode, setRenamingNodeId }) => {
+const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, onContextMenu, renamingNodeId, onRenameNode, setRenamingNodeId, onMoveNode }) => {
     const [isOpen, setIsOpen] = useState(node.type === 'folder' ? node.isOpen ?? true : false);
     const [tempName, setTempName] = useState(node.name);
     const inputRef = useRef<HTMLInputElement>(null);
     const isRenaming = renamingNodeId === node.id;
+    const [isDragOver, setIsDragOver] = useState(false);
 
     useEffect(() => {
         if (node.type === 'folder') {
@@ -131,8 +148,6 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
         if (node.type === 'folder') {
             const newState = !isOpen;
             setIsOpen(newState);
-            // This mutation is for session state persistence of the folder's open/closed status.
-            // It's a pragmatic choice to avoid complex state management for a UI-only feature.
             node.isOpen = newState;
         }
     };
@@ -160,20 +175,62 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
             setRenamingNodeId(null);
         }
     };
+
+    const Icon = getIconForFile(node.name, node.type === 'folder', isOpen);
+
+    // Drag and Drop handlers
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.setData('application/node-id', node.id);
+        e.dataTransfer.effectAllowed = 'move';
+        e.currentTarget.classList.add('dragging');
+    };
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        e.currentTarget.classList.remove('dragging');
+    };
+    
+    const handleDragOver = (e: React.DragEvent) => {
+        if (node.type === 'folder') {
+            e.preventDefault();
+            setIsDragOver(true);
+        }
+    };
+
+    const handleDragLeave = () => {
+        setIsDragOver(false);
+    };
+    
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        if (node.type === 'folder') {
+            const draggedNodeId = e.dataTransfer.getData('application/node-id');
+            if (draggedNodeId && draggedNodeId !== node.id) {
+                onMoveNode(draggedNodeId, node.id);
+            }
+        }
+    };
     
     return (
-        <div>
+        <div className="tree-node-container">
             <div 
+                draggable="true"
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
                 onContextMenu={(e) => onContextMenu(e, node)}
                 style={{ paddingLeft: `${level * 1.25}rem`}}
-                className="group flex items-center gap-2 p-1 text-sm rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700"
+                className={`group flex items-center gap-2 p-1 text-sm rounded-md cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 relative ${isDragOver ? 'drag-over-folder' : ''}`}
             >
+                {level > 0 && <div className="tree-branch"></div>}
                 <div onClick={handleClick} className="flex-1 flex items-center gap-2 truncate">
                     {node.type === 'folder' && (
                         <ChevronDownIcon className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? '' : '-rotate-90'}`} />
                     )}
                      <span className="w-4 h-4 flex-shrink-0 ml-1">
-                        {node.type === 'folder' ? <FolderIcon className="w-4 h-4 text-yellow-500" /> : <FileIcon className="w-4 h-4 text-blue-500" />}
+                        <Icon className="w-4 h-4" />
                     </span>
                     {isRenaming ? (
                         <input
@@ -192,7 +249,8 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
                 </div>
             </div>
             {node.type === 'folder' && isOpen && (
-                <div>
+                <div className="relative" style={{ paddingLeft: `${1.25}rem`}}>
+                     <div className="tree-connector"></div>
                     {node.children.map(child => (
                         <FileTreeNode 
                            key={child.id} 
@@ -203,6 +261,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
                            renamingNodeId={renamingNodeId}
                            onRenameNode={onRenameNode}
                            setRenamingNodeId={setRenamingNodeId}
+                           onMoveNode={onMoveNode}
                         />
                     ))}
                 </div>
@@ -216,15 +275,19 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const { 
         files, openFileIds, activeFileId, onOpenFile, onCloseFile, onSetActiveFile, 
         onUpdateFileContent, onRunProject, isRunning, output,
-        onCreateFile, onCreateFolder, onRenameNode, onDeleteNode
+        onCreateFile, onCreateFolder, onRenameNode, onDeleteNode, onMoveNode
     } = props;
     const { t } = useTranslation();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileSystemNode } | null>(null);
     const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
+    const [isRootDragOver, setIsRootDragOver] = useState(false);
 
-    const activeFile = files
-        .flatMap(node => node.type === 'file' ? [node] : (node.children.filter(c => c.type === 'file') as ProjectFile[]))
-        .find(f => f.id === activeFileId);
+    const activeFile = useMemo(() => findFileInTree(files, activeFileId), [files, activeFileId]);
+    
+    const openFiles = useMemo(() => 
+        openFileIds.map(id => findFileInTree(files, id)).filter((f): f is ProjectFile => !!f),
+        [files, openFileIds]
+    );
 
     const code = activeFile?.content ?? '';
     const language = activeFile ? getLanguageFromExtension(getFileExtension(activeFile.name)) : 'plaintext';
@@ -268,19 +331,21 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
           preRef.current.scrollLeft = e.currentTarget.scrollLeft;
       }
     };
-
-    const findFileById = (id: string): ProjectFile | undefined => {
-      const stack: FileSystemNode[] = [...files];
-      while(stack.length) {
-          const node = stack.pop();
-          if(!node) continue;
-          if(node.type === 'file' && node.id === id) return node;
-          if(node.type === 'folder') stack.push(...node.children);
-      }
-      return undefined;
+    
+    const handleRootDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsRootDragOver(false);
+        const draggedNodeId = e.dataTransfer.getData('application/node-id');
+        if (draggedNodeId) {
+            onMoveNode(draggedNodeId, null); // null targetId means move to root
+        }
     };
 
-    const openFiles = openFileIds.map(findFileById).filter((f): f is ProjectFile => !!f);
+    const TabIcon = ({ name }: { name: string }) => {
+        const Icon = getIconForFile(name, false);
+        return <Icon className="w-4 h-4" />;
+    };
+
 
   return (
     <>
@@ -289,7 +354,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         <div className="w-56 flex-shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
             <div 
               className="p-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
-              onContextMenu={(e) => handleContextMenu(e, { id: 'root', name: 'root', type: 'folder', children: files })}
+              onContextMenu={(e) => handleContextMenu(e, { id: 'root', name: 'root', type: 'folder', children: files, parentId: null })}
             >
                 <h3 className="text-sm font-semibold">{t('sidebar.projects')}</h3>
                 <div className="flex gap-1">
@@ -301,7 +366,12 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                     </button>
                 </div>
             </div>
-            <div className="flex-1 p-2 overflow-y-auto">
+            <div 
+                className={`flex-1 p-2 overflow-y-auto ${isRootDragOver ? 'drag-over-folder' : ''}`}
+                onDragOver={(e) => { e.preventDefault(); setIsRootDragOver(true); }}
+                onDragLeave={() => setIsRootDragOver(false)}
+                onDrop={handleRootDrop}
+            >
                 {files.map(node => (
                     <FileTreeNode 
                       key={node.id} 
@@ -312,6 +382,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                       renamingNodeId={renamingNodeId}
                       setRenamingNodeId={setRenamingNodeId}
                       onRenameNode={onRenameNode}
+                      onMoveNode={onMoveNode}
                     />
                 ))}
             </div>
@@ -328,7 +399,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                         onClick={() => onSetActiveFile(file.id)}
                         className={`flex items-center gap-2 p-2 text-sm rounded-t-md cursor-pointer border-b-2 ${activeFileId === file.id ? 'bg-gray-100 dark:bg-gray-900 border-primary-500' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}
                     >
-                        <span className="w-4 h-4 flex-shrink-0"><FileIcon className="w-4 h-4 text-blue-500" /></span>
+                        <span className="w-4 h-4 flex-shrink-0"><TabIcon name={file.name} /></span>
                         <span className="truncate flex-shrink-0">{file.name}</span>
                         <button 
                             onClick={(e) => { e.stopPropagation(); onCloseFile(file.id); }} 
