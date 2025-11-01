@@ -8,10 +8,19 @@ interface ConfirmationModalProps {
   onConfirm: () => void;
   onClose: () => void;
   confirmText?: string;
+  isDestructive?: boolean;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, onConfirm, onClose, confirmText = 'Confirm' }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ 
+  title, 
+  message, 
+  onConfirm, 
+  onClose, 
+  confirmText = 'Confirm',
+  isDestructive = false 
+}) => {
   const { t } = useTranslation();
+  
   return (
     <div 
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -24,8 +33,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, o
         <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
             <XIcon className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold mb-4">{title}</h2>
+        <h2 className={`text-xl font-bold mb-4 ${isDestructive ? 'text-red-600 dark:text-red-400' : ''}`}>
+          {title}
+        </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{message}</p>
+        {isDestructive && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+            <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+              {t('deletePathModal.warning')}
+            </p>
+          </div>
+        )}
         <div className="flex justify-end gap-3 pt-4">
             <button
             type="button"
@@ -37,7 +55,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ title, message, o
             <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-md hover:bg-red-700"
+            className={`px-4 py-2 text-sm font-semibold text-white rounded-md ${
+              isDestructive 
+                ? 'bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500' 
+                : 'bg-primary-600 hover:bg-primary-700 focus:ring-2 focus:ring-primary-500'
+            }`}
             >
             {confirmText}
             </button>
