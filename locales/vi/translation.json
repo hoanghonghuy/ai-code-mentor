@@ -28,7 +28,9 @@
     },
     "newPath": "Tạo Lộ trình mới",
     "standardPaths": "Lộ trình Tiêu chuẩn",
-    "yourPaths": "Lộ trình của Bạn"
+    "yourPaths": "Lộ trình của Bạn",
+    "deletePath": "Xóa Lộ trình",
+    "managePaths": "Quản lý Lộ trình"
   },
   "chat": {
     "title": "Trò chuyện với Mentor AI",
@@ -118,6 +120,12 @@
     "title": "Xóa dự án",
     "message": "Bạn có chắc chắn muốn xóa \"{{projectName}}\"? Hành động này không thể hoàn tác.",
     "confirm": "Xóa"
+  },
+  "deletePathModal": {
+    "title": "Xóa Lộ trình",
+    "message": "Bạn có chắc chắn muốn xóa lộ trình \"{{pathName}}\"? Tất cả tiến trình học tập và dữ liệu trong lộ trình này sẽ bị mất vĩnh viễn. Hành động này không thể hoàn tác.",
+    "confirm": "Xóa Lộ trình",
+    "warning": "Cảnh báo: Việc xóa lộ trình sẽ không thể khôi phục!"
   },
   "clearHistoryModal": {
     "title": "Xóa Lịch sử Trò chuyện",
