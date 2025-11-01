@@ -7,18 +7,53 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
+
+# Environment variables
 *.local
+.env
+.env.local
+.env.development
+.env.production
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Firebase
+.firebase/
+.firebaserc
+firebase.json
+
+# Build cache
+.cache/
+.parcel-cache/
+.temp/
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Deployment
+vercel.json
+netlify.toml
+_redirects
+
+# AI Studio metadata (not needed for React project)
+metadata.json
