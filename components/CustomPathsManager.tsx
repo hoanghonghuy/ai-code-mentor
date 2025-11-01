@@ -7,9 +7,10 @@ interface Props {
   activePathId: string;
   onSelectPath: (id: string) => void;
   onDeletePath: (id: string) => void;
+  onConfirmDelete: (path: LearningPath) => void;
 }
 
-const CustomPathsManager: React.FC<Props> = ({ customLearningPaths, activePathId, onSelectPath, onDeletePath }) => {
+const CustomPathsManager: React.FC<Props> = ({ customLearningPaths, activePathId, onSelectPath, onDeletePath, onConfirmDelete }) => {
   if (!customLearningPaths?.length) return null;
 
   return (
@@ -27,7 +28,7 @@ const CustomPathsManager: React.FC<Props> = ({ customLearningPaths, activePathId
             </button>
             <button
               className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-              onClick={() => onDeletePath(p.id)}
+              onClick={() => onConfirmDelete(p)}
               aria-label="Delete custom path"
               title="Delete"
             >
