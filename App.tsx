@@ -16,6 +16,7 @@ import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged,
 import { useTranslation, Trans } from 'react-i18next';
 import LivePreview from './components/LivePreview';
 import ChallengeModal from './components/ChallengeModal';
+import CreatePathModal from './components/CreatePathModal';
 
 const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
 const THEME_KEY = 'ai-mentor-theme';
@@ -69,6 +70,7 @@ const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> =>
     projectFiles: JSON.parse(JSON.stringify(defaultProjectFiles)),
     openFileIds: ['file-1', 'file-3'],
     activeFileId: 'file-3',
+    customLearningPaths: [],
   };
 };
 
@@ -139,10 +141,12 @@ const App: React.FC = () => {
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
-  const [activePathId, setActivePathId] = useState<LearningPathId>(initialState.activePathId);
+  const [activePathId, setActivePathId] = useState<string>(initialState.activePathId);
   const [learningPath, setLearningPath] = useState<LearningPath>(initialState.learningPath);
+  const [customLearningPaths, setCustomLearningPaths] = useState<LearningPath[]>(initialState.customLearningPaths);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(initialState.activeLessonId);
   const [learningPathHistories, setLearningPathHistories] = useState<{ [key: string]: ChatMessage[] }>(initialState.learningPathHistories);
+  const [isCreatePathModalOpen, setIsCreatePathModalOpen] = useState(false);
 
   // Custom Project State
   const [customProjects, setCustomProjects] = useState<CustomProject[]>(initialState.customProjects);
@@ -240,6 +244,7 @@ const App: React.FC = () => {
       const freshState = getInitialState(pathId);
       setActivePathId(freshState.activePathId);
       setLearningPath(freshState.learningPath);
+      setCustomLearningPaths(freshState.customLearningPaths);
       setActiveLessonId(freshState.activeLessonId);
       setLearningPathHistories(freshState.learningPathHistories);
       setCustomProjects(freshState.customProjects);
@@ -268,9 +273,10 @@ const App: React.FC = () => {
             
             if (userDocSnap.exists()) {
                 const data = userDocSnap.data() as UserData;
-                const freshState = getInitialState(data.activePathId || 'js-basics');
+                const freshState = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
                 setActivePathId(data.activePathId || freshState.activePathId);
                 setLearningPath(data.learningPath || freshState.learningPath);
+                setCustomLearningPaths(data.customLearningPaths || freshState.customLearningPaths);
                 setActiveLessonId(data.activeLessonId || null);
                 setLearningPathHistories(data.learningPathHistories || {});
                 setCustomProjects(data.customProjects || []);
@@ -296,9 +302,10 @@ const App: React.FC = () => {
             if(guestDataJson) {
                 try {
                     const data = JSON.parse(guestDataJson) as UserData;
-                     const freshState = getInitialState(data.activePathId || 'js-basics');
+                     const freshState = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
                      setActivePathId(data.activePathId || freshState.activePathId);
                      setLearningPath(data.learningPath || freshState.learningPath);
+                     setCustomLearningPaths(data.customLearningPaths || freshState.customLearningPaths);
                      setActiveLessonId(data.activeLessonId || null);
                      setLearningPathHistories(data.learningPathHistories || {});
                      setCustomProjects(data.customProjects || []);
@@ -348,6 +355,7 @@ const App: React.FC = () => {
         projectFiles,
         openFileIds,
         activeFileId,
+        customLearningPaths,
     };
 
     const saveData = () => {
@@ -375,7 +383,7 @@ const App: React.FC = () => {
     activePathId, learningPath, activeLessonId, learningPathHistories,
     customProjects, activeCustomProjectId, points, achievements,
     notes, bookmarkedLessonIds, customDocs, aiLanguage, theme,
-    projectFiles, openFileIds, activeFileId
+    projectFiles, openFileIds, activeFileId, customLearningPaths
   ]);
 
   const handleLogin = async () => {
@@ -1102,9 +1110,19 @@ ${projectStructure}`;
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, [handleSendMessage, unlockAchievement, learningPathHistories]);
 
-  const handleSelectPath = useCallback((pathId: LearningPathId) => {
-    if (user) {
-        const newPathData = getInitialLearningPath(pathId);
+  const handleSelectPath = useCallback((pathId: string) => {
+    const standardPath = learningPaths[pathId as LearningPathId];
+    const customPath = customLearningPaths.find(p => p.id === pathId);
+    const pathData = customPath || standardPath;
+
+    if (!pathData) {
+      console.error(`Path with id "${pathId}" not found.`);
+      return;
+    }
+    
+    const newPathData = JSON.parse(JSON.stringify(pathData));
+
+    if (user && !customPath) { // Reset progress only for standard paths for logged-in user
         setActivePathId(pathId);
         setLearningPath(newPathData);
         setAchievements(getInitialAchievements(newPathData.title));
@@ -1116,10 +1134,29 @@ ${projectStructure}`;
         setActiveView('learningPath');
         setMessages([]);
         setChatHistory({});
-    } else {
-        resetStateForGuest(pathId);
+    } else if (user && customPath) { // Switch to a custom path without resetting
+        setActivePathId(pathId);
+        setLearningPath(newPathData);
+        // Note: achievements/points are not reset for custom paths
+        setActiveLessonId(null);
+        setActiveView('learningPath');
+        setMessages([]);
+    } else { // Guest user
+        resetStateForGuest(pathId as LearningPathId);
     }
-  }, [user, resetStateForGuest]);
+  }, [user, resetStateForGuest, customLearningPaths]);
+
+  const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
+    const newPath: LearningPath = {
+      ...pathData,
+      id: `custom-${Date.now()}`
+    };
+    
+    setCustomLearningPaths(prev => [...prev, newPath]);
+    handleSelectPath(newPath.id);
+    setIsCreatePathModalOpen(false);
+
+  }, [handleSelectPath]);
 
   const handleCreateProjectFromScaffold = useCallback((name: string, goal: string, files: FileSystemNode[]) => {
     const newProject: CustomProject = {
@@ -1387,6 +1424,8 @@ ${projectStructure}`;
           onUiLanguageChange={(lang) => i18n.changeLanguage(lang)}
           aiLanguage={aiLanguage}
           onAiLanguageChange={setAiLanguage}
+          customLearningPaths={customLearningPaths}
+          onNewPath={() => setIsCreatePathModalOpen(true)}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           {!user && (
@@ -1512,6 +1551,14 @@ ${projectStructure}`;
                 setIsCreateModalOpen(false);
             }}
             onScaffoldComplete={handleCreateProjectFromScaffold}
+            ai={ai}
+            aiLanguage={aiLanguage || 'en'}
+          />
+      )}
+      {isCreatePathModalOpen && (
+          <CreatePathModal 
+            onClose={() => setIsCreatePathModalOpen(false)}
+            onPathCreated={handleCreateCustomPath}
             ai={ai}
             aiLanguage={aiLanguage || 'en'}
           />

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep, CustomProject, Priority } from '../types';
-import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon, FlagIcon } from './icons';
+import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon, FlagIcon, MapIcon } from './icons';
 import AchievementsView from './AchievementsView';
 import SettingsView from './SettingsView';
 import CustomProjectView from './CustomProjectView';
@@ -16,8 +16,8 @@ interface LearningPathProps {
   setIsOpen: (isOpen: boolean) => void;
   achievements: Achievement[];
   allPaths: LearningPath[];
-  activePathId: LearningPathId;
-  onSelectPath: (pathId: LearningPathId) => void;
+  activePathId: string;
+  onSelectPath: (pathId: string) => void;
   bookmarkedLessonIds: string[];
   onToggleBookmark: (lessonId: string) => void;
   onSetPriority: (itemId: string, priority: Priority) => void;
@@ -35,6 +35,8 @@ interface LearningPathProps {
   onUiLanguageChange: (lang: string) => void;
   aiLanguage: string;
   onAiLanguageChange: (lang: string) => void;
+  customLearningPaths: LearningPath[];
+  onNewPath: () => void;
 }
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
@@ -230,7 +232,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const { t } = useTranslation();
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange } = props;
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange, customLearningPaths, onNewPath } = props;
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'priority'>('default');
@@ -305,18 +307,30 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
             {activeView === 'learningPath' ? (
                 <>
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="mb-4">
+                        <div className="mb-4 flex items-center gap-2">
                             <select
                                 id="learning-path-select"
                                 value={activePathId}
-                                onChange={(e) => onSelectPath(e.target.value as LearningPathId)}
+                                onChange={(e) => onSelectPath(e.target.value)}
                                 disabled={isLoading}
-                                className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                                className="flex-1 w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
                             >
-                                {allPaths.map(path => (
-                                    <option key={path.id} value={path.id}>{path.title}</option>
-                                ))}
+                                <optgroup label={t('sidebar.standardPaths')}>
+                                    {allPaths.map(path => (
+                                        <option key={path.id} value={path.id}>{path.title}</option>
+                                    ))}
+                                </optgroup>
+                                {customLearningPaths.length > 0 && (
+                                    <optgroup label={t('sidebar.yourPaths')}>
+                                        {customLearningPaths.map(path => (
+                                            <option key={path.id} value={path.id}>{path.title}</option>
+                                        ))}
+                                    </optgroup>
+                                )}
                             </select>
+                            <button onClick={onNewPath} disabled={isLoading} className="p-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" title={t('sidebar.newPath')}>
+                                <MapIcon className="w-5 h-5"/>
+                            </button>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-gray-500">{Math.round(overallProgress)}%</span>

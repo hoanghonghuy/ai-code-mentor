@@ -52,7 +52,7 @@ export interface LearningModule {
 export type LearningPathId = 'js-basics' | 'python-basics' | 'csharp-basics' | 'go-basics' | 'java-basics' | 'frontend-basics' | 'fullstack-basics' | 'mobile-basics' | 'typescript-basics' | 'sql-basics' | 'git-basics' | 'devops-basics' | 'dsa-basics';
 
 export interface LearningPath {
-  id: LearningPathId;
+  id: string; // Changed from LearningPathId to string to support custom paths
   title: string;
   modules: LearningModule[];
 }
@@ -112,11 +112,12 @@ export interface UserData {
   notes: { [key: string]: string };
   bookmarkedLessonIds: string[];
   customDocs: string[];
-  activePathId: LearningPathId;
+  activePathId: string; // Changed from LearningPathId to string
   aiLanguage?: string;
   lastSaved?: any;
   theme: Theme;
   projectFiles: FileSystemNode[];
   openFileIds: string[];
   activeFileId: string | null;
+  customLearningPaths: LearningPath[];
 }

@@ -25,7 +25,10 @@
     "sort": {
       "default": "Mặc định",
       "priority": "Ưu tiên"
-    }
+    },
+    "newPath": "Tạo Lộ trình mới",
+    "standardPaths": "Lộ trình Tiêu chuẩn",
+    "yourPaths": "Lộ trình của Bạn"
   },
   "chat": {
     "title": "Trò chuyện với Mentor AI",
@@ -102,6 +105,14 @@
     "generating": "Đang tạo...",
     "preview": "Xem trước cấu trúc tệp",
     "confirmMessage": "Tôi đã hiểu yêu cầu của bạn. Đây là cấu trúc tệp tôi sẽ tạo ra. Cấu trúc này có đúng không?"
+  },
+  "createPathModal": {
+    "title": "Tạo Lộ trình Học tập Cá nhân hóa",
+    "initialBotMessage": "Xin chào! Tôi có thể tạo một lộ trình học tập tùy chỉnh cho bạn. Mục tiêu học tập cuối cùng của bạn là gì? Ví dụ: 'Trở thành một nhà phát triển backend' hoặc 'Học cách xây dựng bản đồ web tương tác'.",
+    "preview": "Xem trước Lộ trình được tạo",
+    "confirmMessage": "Đây là lộ trình học tập tôi đã thiết kế cho bạn. Lộ trình này có phù hợp không?",
+    "startPath": "Bắt đầu Lộ trình này",
+    "starting": "Đang bắt đầu..."
   },
   "deleteProjectModal": {
     "title": "Xóa dự án",

@@ -25,7 +25,10 @@
     "sort": {
       "default": "Default",
       "priority": "Priority"
-    }
+    },
+    "newPath": "Create New Path",
+    "standardPaths": "Standard Paths",
+    "yourPaths": "Your Paths"
   },
   "chat": {
     "title": "AI Mentor Chat",
@@ -102,6 +105,14 @@
     "generating": "Generating...",
     "preview": "Preview File Structure",
     "confirmMessage": "I've understood your requirements. Here is the file structure I will generate. Does this look correct?"
+  },
+  "createPathModal": {
+    "title": "Create a Personalized Learning Path",
+    "initialBotMessage": "Hello! I can create a custom learning path for you. What is your ultimate learning goal? For example: 'Become a backend developer' or 'Learn to build interactive web maps'.",
+    "preview": "Generated Path Preview",
+    "confirmMessage": "Here is the learning path I've designed for you. Does this look right?",
+    "startPath": "Start This Path",
+    "starting": "Starting..."
   },
   "deleteProjectModal": {
     "title": "Delete Project",
