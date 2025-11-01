@@ -98,8 +98,10 @@
     "saveChanges": "Save Changes",
     "scaffoldTitle": "Project Scaffolding",
     "initialBotMessage": "Hello! I can help you set up a new project. First, what is the name of your project and what is its main goal?",
-    "generateProject": "Generate Project Files",
-    "generating": "Generating..."
+    "generateProject": "Create Project",
+    "generating": "Generating...",
+    "preview": "Preview File Structure",
+    "confirmMessage": "I've understood your requirements. Here is the file structure I will generate. Does this look correct?"
   },
   "deleteProjectModal": {
     "title": "Delete Project",
@@ -123,7 +125,11 @@
     "chat": "Chat",
     "tools": "Tools",
     "codeEditor": "Code Editor",
-    "livePreview": "Live Preview"
+    "livePreview": "Live Preview",
+    "runResult": "Run Result",
+    "analysis": "Analysis",
+    "explanation": "Explanation",
+    "console": "Console"
   },
   "priority": {
     "high": "High",
@@ -148,11 +154,14 @@
     "analyzeCode": "Analyze Code",
     "suggestCompletion": "Suggest Completion",
     "analyzing": "Analyzing code...",
-    "explainSelection": "Explain Selection"
+    "explainSelection": "Explain Selection",
+    "prettifyCode": "Prettify Code",
+    "formattingCode": "Formatting..."
   },
   "challengeModal": {
     "title": "AI Coding Challenge",
     "loading": "Generating a challenge for you...",
-    "close": "Close"
+    "close": "Close",
+    "solve": "Solve in Playground"
   }
 }

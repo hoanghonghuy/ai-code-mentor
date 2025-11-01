@@ -99,7 +99,9 @@
     "scaffoldTitle": "Dựng sườn dự án",
     "initialBotMessage": "Xin chào! Tôi có thể giúp bạn thiết lập một dự án mới. Đầu tiên, cho tôi biết tên và mục tiêu chính của dự án là gì?",
     "generateProject": "Tạo tệp dự án",
-    "generating": "Đang tạo..."
+    "generating": "Đang tạo...",
+    "preview": "Xem trước cấu trúc tệp",
+    "confirmMessage": "Tôi đã hiểu yêu cầu của bạn. Đây là cấu trúc tệp tôi sẽ tạo ra. Cấu trúc này có đúng không?"
   },
   "deleteProjectModal": {
     "title": "Xóa dự án",
@@ -123,7 +125,11 @@
     "chat": "Trò chuyện",
     "tools": "Công cụ",
     "codeEditor": "Trình sửa mã",
-    "livePreview": "Xem trước"
+    "livePreview": "Xem trước",
+    "runResult": "Kết quả chạy",
+    "analysis": "Phân tích",
+    "explanation": "Giải thích",
+    "console": "Bảng điều khiển"
   },
   "priority": {
     "high": "Cao",
@@ -148,11 +154,14 @@
     "analyzeCode": "Phân tích Mã",
     "suggestCompletion": "Gợi ý Hoàn thành",
     "analyzing": "Đang phân tích mã...",
-    "explainSelection": "Giải thích Vùng chọn"
+    "explainSelection": "Giải thích Vùng chọn",
+    "prettifyCode": "Định dạng mã",
+    "formattingCode": "Đang định dạng..."
   },
   "challengeModal": {
     "title": "Thử thách lập trình AI",
     "loading": "Đang tạo thử thách cho bạn...",
-    "close": "Đóng"
+    "close": "Đóng",
+    "solve": "Giải trong Sân chơi"
   }
 }

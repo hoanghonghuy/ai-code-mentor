@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FileSystemNode, ProjectFile, ProjectFolder } from '../types';
-import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile, SearchIcon, MagicWandIcon, SparklesIcon } from './icons';
+import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile, SearchIcon, MagicWandIcon, SparklesIcon, FormatIcon } from './icons';
 import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from './MarkdownRenderer';
 
@@ -19,10 +19,12 @@ interface CodeEditorProps {
     isRunning: boolean;
     isAnalyzing: boolean;
     isSuggesting: boolean;
+    isFormatting: boolean;
     onAnalyzeCode: (code: string, language: string) => void;
     onSuggestCompletion: (code: string, fileId: string) => void;
     onExplainCode: (selectedCode: string, fileContext: string, language: string) => void;
-    output: any;
+    onFormatCode: (fileId: string, code: string, language: string) => void;
+    output: { run: any; analysis: string; explanation: string };
     onSetOutput: (output: any) => void;
     // File operations
     onCreateFile: (parentId: string | null) => void;
@@ -291,114 +293,99 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
     );
 };
 
-const OutputDisplay: React.FC<{ output: any; isRunning: boolean; }> = ({ output, isRunning }) => {
+const OutputDisplay: React.FC<{ output: any; type: 'run' | 'analysis' | 'explanation'; isBusy: boolean }> = ({ output, type, isBusy }) => {
     const { t } = useTranslation();
+    const content = output[type];
 
-    if (isRunning) {
+    if (isBusy) {
+        let message = t('playground.executing');
+        if (type === 'analysis') message = t('codeEditor.analyzing');
+        if (type === 'explanation') message = t('codeEditor.analyzing');
         return (
             <div className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
-                {t('playground.executing')}
-            </div>
-        );
-    }
-
-    let parsedOutput: any = null;
-    let isRawText = false;
-
-    if (typeof output === 'string') {
-        try {
-            // It might be a stringified JSON from a previous state or a raw string
-            const potentialJson = JSON.parse(output);
-            if(typeof potentialJson === 'object' && potentialJson !== null) {
-                parsedOutput = potentialJson;
-            } else {
-                 isRawText = true;
-            }
-        } catch (e) {
-            isRawText = true;
-        }
-        if(isRawText || !output) {
-             parsedOutput = { type: 'raw', rawText: output };
-        }
-    } else if (output && typeof output === 'object') {
-        parsedOutput = output;
-    }
-
-    if (!parsedOutput || Object.keys(parsedOutput).length === 0) {
-        return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
-    }
-
-    if (parsedOutput.type === 'analysis') {
-        return (
-            <div className="p-4 font-sans text-sm">
-                <SimpleMarkdown text={parsedOutput.content} searchQuery="" />
-            </div>
-        );
-    }
-
-    if (parsedOutput.type === 'web') {
-        return (
-            <div className="p-4 font-sans">
-                {/* Virtual Browser Window */}
-                <div className="mx-auto my-2 max-w-full w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg shadow-md bg-gray-100 dark:bg-gray-800">
-                    {/* Title bar */}
-                    <div className="flex items-center gap-1.5 p-2 border-b-2 border-dashed border-gray-300 dark:border-gray-600">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <div className="flex-1 text-center text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-0.5">
-                            {parsedOutput.windowTitle || 'Untitled'}
-                        </div>
-                    </div>
-                    {/* Browser content */}
-                    <div className="p-4 bg-white dark:bg-gray-900 rounded-b-lg min-h-[5rem]">
-                        <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 dark:text-gray-200">
-                            {parsedOutput.browserContent || ''}
-                        </pre>
-                    </div>
-                </div>
-
-                {/* Console Logs */}
-                {parsedOutput.consoleLogs && parsedOutput.consoleLogs.length > 0 && (
-                    <div className="mt-4">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Console</h4>
-                        <div className="bg-gray-900 text-gray-200 font-mono text-xs rounded-md p-3 overflow-x-auto">
-                            {parsedOutput.consoleLogs.map((log: string, i: number) => (
-                                <div key={i} className="flex items-start border-b border-gray-700 last:border-b-0 py-1">
-                                    <span className="text-gray-500 mr-2 flex-shrink-0">&gt;</span>
-                                    <pre className="flex-1 whitespace-pre-wrap break-all">{log}</pre>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {message}
             </div>
         );
     }
     
-    let textToDisplay = '';
-    if (parsedOutput.type === 'script' && Array.isArray(parsedOutput.consoleLogs)) {
-        textToDisplay = parsedOutput.consoleLogs.join('\n');
-    } else if (parsedOutput.type === 'error') {
-        textToDisplay = `Error: ${parsedOutput.error}`;
-    } else if (parsedOutput.type === 'raw') {
-        textToDisplay = parsedOutput.rawText;
-    } else if (typeof parsedOutput === 'string') {
-        textToDisplay = parsedOutput;
-    } else if (typeof parsedOutput === 'object') {
-        // Fallback for unexpected object structures
-        textToDisplay = JSON.stringify(parsedOutput, null, 2);
-    }
-
-    if (!textToDisplay) {
+    if (!content) {
         return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
     }
 
-    return (
-        <pre className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
-            {textToDisplay}
-        </pre>
-    );
+    if (type === 'analysis' || type === 'explanation') {
+        return (
+            <div className="p-4 font-sans text-sm">
+                <SimpleMarkdown text={content} searchQuery="" />
+            </div>
+        );
+    }
+
+    if (type === 'run') {
+         if (content.type === 'web') {
+            return (
+                <div className="p-4 font-sans">
+                    {/* Virtual Browser Window */}
+                    <div className="mx-auto my-2 max-w-full w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg shadow-md bg-gray-100 dark:bg-gray-800">
+                        {/* Title bar */}
+                        <div className="flex items-center gap-1.5 p-2 border-b-2 border-dashed border-gray-300 dark:border-gray-600">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div className="flex-1 text-center text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-0.5">
+                                {content.windowTitle || 'Untitled'}
+                            </div>
+                        </div>
+                        {/* Browser content */}
+                        <div className="p-4 bg-white dark:bg-gray-900 rounded-b-lg min-h-[5rem]">
+                            <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 dark:text-gray-200">
+                                {content.browserContent || ''}
+                            </pre>
+                        </div>
+                    </div>
+
+                    {/* Console Logs */}
+                    {content.consoleLogs && content.consoleLogs.length > 0 && (
+                        <div className="mt-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Console</h4>
+                            <div className="bg-gray-900 text-gray-200 font-mono text-xs rounded-md p-3 overflow-x-auto">
+                                {content.consoleLogs.map((log: string, i: number) => (
+                                    <div key={i} className="flex items-start border-b border-gray-700 last:border-b-0 py-1">
+                                        <span className="text-gray-500 mr-2 flex-shrink-0">&gt;</span>
+                                        <pre className="flex-1 whitespace-pre-wrap break-all">{log}</pre>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        
+        let textToDisplay = '';
+        if (content.type === 'script' && Array.isArray(content.consoleLogs)) {
+            textToDisplay = content.consoleLogs.join('\n');
+        } else if (content.type === 'error') {
+            textToDisplay = `Error: ${content.error}`;
+        } else if (content.type === 'raw') {
+            textToDisplay = content.rawText;
+        } else if (typeof content === 'string') {
+            textToDisplay = content;
+        } else if (typeof content === 'object') {
+            textToDisplay = JSON.stringify(content, null, 2);
+        }
+
+        if (!textToDisplay) {
+            return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
+        }
+        
+        return (
+            <pre className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
+                {textToDisplay}
+            </pre>
+        );
+    }
+    
+    return null;
 };
 
 
@@ -407,13 +394,14 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         files, openFileIds, activeFileId, onOpenFile, onCloseFile, onSetActiveFile, 
         onUpdateFileContent, onRunProject, isRunning, output, onSetOutput,
         onCreateFile, onCreateFolder, onRenameNode, onDeleteNode, onMoveNode,
-        isAnalyzing, isSuggesting, onAnalyzeCode, onSuggestCompletion, onExplainCode
+        isAnalyzing, isSuggesting, isFormatting, onAnalyzeCode, onSuggestCompletion, onExplainCode, onFormatCode
     } = props;
     const { t } = useTranslation();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileSystemNode } | null>(null);
     const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
     const [isRootDragOver, setIsRootDragOver] = useState(false);
-    const [selection, setSelection] = useState('');
+    const [selection, setSelection] = useState({ text: '', start: 0, end: 0 });
+    const [activeOutputTab, setActiveOutputTab] = useState<'run' | 'analysis' | 'explanation'>('run');
 
     const [sidebarWidth, setSidebarWidth] = useState(224); // Corresponds to w-56
     const isSidebarResizing = useRef(false);
@@ -422,6 +410,9 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const [outputHeight, setOutputHeight] = useState(192); // 12rem
     const isOutputResizing = useRef(false);
     const editorAndOutputContainerRef = useRef<HTMLDivElement>(null);
+    
+    const [lineNumbers, setLineNumbers] = useState('1');
+    const highlightedLines = useRef<HTMLDivElement | null>(null);
 
     const handleSidebarMouseMove = useCallback((e: MouseEvent) => {
         if (!isSidebarResizing.current || !editorContainerRef.current) return;
@@ -493,6 +484,8 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const codeRef = useRef<HTMLElement>(null);
     const preRef = useRef<HTMLPreElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const lineNumbersRef = useRef<HTMLDivElement>(null);
+    const editorWrapperRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (codeRef.current && activeFile) {
@@ -500,8 +493,46 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         } else if (codeRef.current) {
             codeRef.current.innerHTML = '';
         }
+        const lineCount = code.split('\n').length;
+        const numbers = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
+        setLineNumbers(numbers);
     }, [code, language, activeFile]);
     
+    useEffect(() => {
+      if (output.explanation && activeOutputTab !== 'explanation') {
+        setActiveOutputTab('explanation');
+      }
+      if (output.explanation && selection.text) {
+          const textarea = textareaRef.current;
+          if (textarea) {
+            const lines = textarea.value.substring(0, selection.start).split('\n').length;
+            const endLines = textarea.value.substring(0, selection.end).split('\n').length;
+            const lineCount = endLines - lines + 1;
+            
+            if (highlightedLines.current) {
+                highlightedLines.current.style.top = `${(lines - 1) * 1.5}rem`;
+                highlightedLines.current.style.height = `${lineCount * 1.5}rem`;
+                highlightedLines.current.style.display = 'block';
+            }
+          }
+      } else if (highlightedLines.current) {
+          highlightedLines.current.style.display = 'none';
+      }
+    }, [output.explanation]);
+    
+    useEffect(() => {
+      if(output.analysis && activeOutputTab !== 'analysis') {
+          setActiveOutputTab('analysis');
+      }
+    }, [output.analysis]);
+    
+    useEffect(() => {
+      if(output.run && activeOutputTab !== 'run') {
+          setActiveOutputTab('run');
+      }
+    }, [output.run]);
+    
+
     useEffect(() => {
         const closeMenu = () => setContextMenu(null);
         window.addEventListener('click', closeMenu);
@@ -524,10 +555,14 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     }, []);
 
     const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-      if (preRef.current) {
-          preRef.current.scrollTop = e.currentTarget.scrollTop;
-          preRef.current.scrollLeft = e.currentTarget.scrollLeft;
-      }
+        const { scrollTop, scrollLeft } = e.currentTarget;
+        if (preRef.current) {
+            preRef.current.scrollTop = scrollTop;
+            preRef.current.scrollLeft = scrollLeft;
+        }
+        if (lineNumbersRef.current) {
+            lineNumbersRef.current.scrollTop = scrollTop;
+        }
     };
     
     const handleRootDrop = (e: React.DragEvent) => {
@@ -539,12 +574,31 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
             onMoveNode(draggedNodeId, null); // null targetId means move to root
         }
     };
+    
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            const start = e.currentTarget.selectionStart;
+            const end = e.currentTarget.selectionEnd;
+            
+            const newCode = code.substring(0, start) + '  ' + code.substring(end);
+            if(activeFileId) {
+                onUpdateFileContent(activeFileId, newCode);
+            }
+            // This timeout is necessary to wait for React's state update
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+                }
+            }, 0);
+        }
+    };
 
     const handleSelectionChange = () => {
         const textarea = textareaRef.current;
         if (textarea) {
             const selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
-            setSelection(selectedText);
+            setSelection({ text: selectedText, start: textarea.selectionStart, end: textarea.selectionEnd });
         }
     };
 
@@ -552,7 +606,6 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         const Icon = getIconForFile(name, false);
         return <Icon className="w-4 h-4" />;
     };
-
 
   return (
     <>
@@ -627,8 +680,16 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                 </div>
                 <div className="ml-4 flex items-center gap-2 flex-shrink-0">
                     <button
-                        onClick={() => onExplainCode(selection, code, language)}
-                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting || !selection}
+                        onClick={() => onFormatCode(activeFileId!, code, language)}
+                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting || isFormatting}
+                        className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title={t('codeEditor.prettifyCode')}
+                        >
+                        <FormatIcon className={`w-5 h-5 ${isFormatting ? 'animate-pulse' : ''}`}/>
+                    </button>
+                    <button
+                        onClick={() => onExplainCode(selection.text, code, language)}
+                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting || !selection.text}
                         className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         title={t('codeEditor.explainSelection')}
                         >
@@ -651,7 +712,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                         <MagicWandIcon className="w-5 h-5"/>
                     </button>
                     <button
-                        onClick={onRunProject}
+                        onClick={() => { setActiveOutputTab('run'); onRunProject(); }}
                         disabled={isRunning || isAnalyzing || isSuggesting}
                         className="p-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
                         >
@@ -662,28 +723,37 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
             </div>
             
             {/* Editor Area */}
-            <div className="flex-1 relative bg-gray-50 dark:bg-gray-900 min-h-0">
+            <div ref={editorWrapperRef} className="flex-1 relative bg-gray-50 dark:bg-gray-900 min-h-0 flex flex-row overflow-hidden">
                  {activeFile ? (
                     <>
-                        <pre 
-                            ref={preRef}
-                            aria-hidden="true" 
-                            className="absolute inset-0 p-4 font-mono text-sm overflow-auto z-0"
-                        >
-                            <code ref={codeRef} className={`language-${language}`}></code>
-                        </pre>
-                        <textarea
-                            ref={textareaRef}
-                            value={code}
-                            onChange={(e) => onUpdateFileContent(activeFileId!, e.target.value)}
-                            onScroll={handleScroll}
-                            onSelect={handleSelectionChange}
-                            onMouseUp={handleSelectionChange} // For mouse-based selection
-                            onKeyUp={handleSelectionChange} // For keyboard-based selection
-                            placeholder="Enter your code here"
-                            className="absolute inset-0 p-4 font-mono text-sm bg-transparent text-transparent caret-black dark:caret-white border-0 focus:ring-0 resize-none z-10"
-                            spellCheck="false"
-                        />
+                        <div ref={lineNumbersRef} className="p-4 font-mono text-sm text-right text-gray-400 bg-gray-100 dark:bg-gray-800 select-none overflow-y-hidden" style={{ lineHeight: '1.5rem' }}>
+                           {lineNumbers.split('\n').map((n, i) => <div key={i}>{n}</div>)}
+                        </div>
+                        <div className="relative flex-1">
+                            <div ref={highlightedLines} className="absolute left-0 w-full bg-primary-500/10 dark:bg-primary-400/10 border-l-2 border-primary-500 pointer-events-none" style={{ display: 'none', transition: 'top 0.2s, height 0.2s' }}></div>
+                            <pre 
+                                ref={preRef}
+                                aria-hidden="true" 
+                                className="absolute inset-0 p-4 font-mono text-sm overflow-auto z-0"
+                                style={{ lineHeight: '1.5rem' }}
+                            >
+                                <code ref={codeRef} className={`language-${language}`}></code>
+                            </pre>
+                            <textarea
+                                ref={textareaRef}
+                                value={code}
+                                onChange={(e) => onUpdateFileContent(activeFileId!, e.target.value)}
+                                onScroll={handleScroll}
+                                onKeyDown={handleKeyDown}
+                                onSelect={handleSelectionChange}
+                                onMouseUp={handleSelectionChange}
+                                onKeyUp={handleSelectionChange}
+                                placeholder="Enter your code here"
+                                className="absolute inset-0 p-4 font-mono text-sm bg-transparent text-transparent caret-black dark:caret-white border-0 focus:ring-0 resize-none z-10"
+                                style={{ lineHeight: '1.5rem' }}
+                                spellCheck="false"
+                            />
+                        </div>
                     </>
                 ) : (
                     <div className="flex h-full items-center justify-center text-gray-500">
@@ -702,18 +772,22 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
             
             {/* Output Panel */}
             <div style={{ height: `${outputHeight}px` }} className="flex-shrink-0 flex flex-col">
-                 <div className="flex-shrink-0 flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider">{t('codeEditor.output')}</h3>
+                 <div className="flex-shrink-0 flex justify-between items-center bg-gray-100 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center">
+                       <button onClick={() => setActiveOutputTab('run')} className={`py-2 px-4 text-xs font-semibold border-b-2 ${activeOutputTab === 'run' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t('tabs.runResult')}</button>
+                       <button onClick={() => setActiveOutputTab('analysis')} className={`py-2 px-4 text-xs font-semibold border-b-2 ${activeOutputTab === 'analysis' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t('tabs.analysis')}</button>
+                       <button onClick={() => setActiveOutputTab('explanation')} className={`py-2 px-4 text-xs font-semibold border-b-2 ${activeOutputTab === 'explanation' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t('tabs.explanation')}</button>
+                    </div>
                     <button 
-                        onClick={() => onSetOutput('')}
-                        className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 p-1 rounded"
+                        onClick={() => onSetOutput({ run: '', analysis: '', explanation: '' })}
+                        className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 p-1 rounded mr-2"
                         title={t('codeEditor.clearOutput')}
                     >
                         {t('codeEditor.clear')}
                     </button>
                 </div>
                 <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto min-h-0">
-                   <OutputDisplay output={output} isRunning={isRunning || isAnalyzing || isSuggesting} />
+                   <OutputDisplay output={output} type={activeOutputTab} isBusy={isRunning || isAnalyzing || isSuggesting || isFormatting} />
                 </div>
             </div>
         </div>

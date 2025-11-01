@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { XIcon, SendIcon, BotIcon, UserIcon } from './icons';
+import { XIcon, SendIcon, BotIcon, UserIcon, FolderIcon, FileIcon, getIconForFile } from './icons';
 import { useTranslation } from 'react-i18next';
-import { CustomProject, FileSystemNode, ChatMessage } from '../types';
+import { CustomProject, FileSystemNode, ChatMessage, ProjectFile } from '../types';
 import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
 import { SimpleMarkdown } from './MarkdownRenderer';
 
@@ -25,20 +25,32 @@ const fileSystemNodeSchema = {
             type: Type.ARRAY,
             description: 'An array of child nodes. This should be an empty array for files.',
             items: {
-                // This creates a recursive definition
-                type: Type.OBJECT,
-                properties: {
-                    id: { type: Type.STRING },
-                    name: { type: Type.STRING },
-                    type: { type: Type.STRING },
-                    content: { type: Type.STRING },
-                    parentId: { type: Type.STRING },
-                    children: { type: Type.ARRAY, items: { type: Type.OBJECT } } // Simplified recursion for schema
-                }
+                $ref: '#/items' // Recursive definition
             }
         },
     },
     required: ['id', 'name', 'type', 'parentId']
+};
+
+const FileTreePreview: React.FC<{ files: FileSystemNode[], level?: number }> = ({ files, level = 0 }) => {
+    return (
+        <ul className={level === 0 ? "" : "pl-4"}>
+            {files.map(node => {
+                const Icon = getIconForFile(node.name, node.type === 'folder');
+                return (
+                    <li key={node.id} className="flex flex-col">
+                        <div className="flex items-center gap-2 py-1 text-sm">
+                            <Icon className="w-4 h-4 flex-shrink-0" />
+                            <span>{node.name}</span>
+                        </div>
+                        {node.type === 'folder' && node.children.length > 0 && (
+                            <FileTreePreview files={node.children} level={level + 1} />
+                        )}
+                    </li>
+                );
+            })}
+        </ul>
+    );
 };
 
 const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldComplete, ai, aiLanguage }) => {
@@ -48,13 +60,14 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
   const [isLoading, setIsLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [projectDetails, setProjectDetails] = useState<{name: string, goal: string} | null>(null);
+  const [generatedFiles, setGeneratedFiles] = useState<FileSystemNode[] | null>(null);
 
   const chatSessionRef = useRef<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, generatedFiles]);
 
   const initializeChat = async () => {
     if (!ai) return;
@@ -68,14 +81,15 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
 
     **Conversation Flow:**
     1.  Start by greeting the user and asking for the project's name and main goal.
-    2.  Ask one or two clarifying questions if needed (e.g., "What technologies do you plan to use?").
-    3.  Once you have a clear idea, confirm with the user (e.g., "Okay, so you want to build a [description]. Shall I generate the files for that?").
-    4.  IMPORTANT: When the user confirms, your FINAL message MUST be the JSON object representing the file system, and NOTHING ELSE.
+    2.  Ask one or two clarifying questions if needed. Be specific. For example: "For the React and Tailwind project, do you need a bundler like Vite set up, or just the basic HTML file?".
+    3.  Once you have a clear idea, confirm with the user and tell them you are ready to generate the file structure (e.g., "Okay, I have enough information to create a [description]. I am ready to generate the files.").
+    4.  IMPORTANT: After the user confirms (e.g., they say "yes" or "go ahead"), your NEXT message MUST be the JSON object representing the file system, and NOTHING ELSE.
     
     **JSON Output Rules:**
     -   Your final response must be ONLY a valid JSON object. No markdown, no "Here is the JSON", just the raw JSON.
-    -   The JSON must be an array of FileSystemNode objects.
+    -   The JSON must be an array of FileSystemNode objects representing the root nodes.
     -   Each node must have \`id\`, \`name\`, \`type\`, \`parentId\`.
+    -   Child nodes must be nested in the \`children\` array of their parent.
     -   Files must have a \`content\` property. Folders should have \`content: ""\` or not have it.
     -   Folders must have a \`children\` array. Files must have an empty \`children\` array.
     -   Root nodes must have \`parentId: null\`. Child nodes must have the \`id\` of their parent.
@@ -86,12 +100,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
     chatSessionRef.current = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: {
-            type: Type.ARRAY,
-            items: fileSystemNodeSchema,
-        }
+        systemInstruction
       }
     });
 
@@ -107,28 +116,9 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
     initializeChat();
   }, [ai, aiLanguage, t]);
 
-  const handleFinalGeneration = async () => {
-      if (!chatSessionRef.current || !projectDetails) return;
-      setIsLoading(true);
-      
-      try {
-        // Send a final confirmation message to trigger the JSON-only response
-        const result = await chatSessionRef.current.sendMessage({ message: "Yes, please generate the files." });
-        const text = result.text.trim();
-        
-        try {
-            const files = JSON.parse(text) as FileSystemNode[];
-            onScaffoldComplete(projectDetails.name, projectDetails.goal, files);
-        } catch (e) {
-            console.error("Failed to parse AI response as JSON:", e);
-             const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "I'm sorry, I couldn't generate the project files correctly. Please try again."}]};
-             setMessages(prev => [...prev, errorMsg]);
-        }
-
-      } catch (error) {
-        console.error('Error generating files:', error);
-      } finally {
-        setIsLoading(false);
+  const handleCreateProject = () => {
+      if (generatedFiles && projectDetails) {
+          onScaffoldComplete(projectDetails.name, projectDetails.goal, generatedFiles);
       }
   };
 
@@ -139,19 +129,11 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
       const userInput = input.trim();
       setInput('');
       
-      // Heuristic to capture project name/goal from early messages
-      if (!projectDetails && messages.length < 4) {
-          if (!projectDetails?.name && (userInput.toLowerCase().includes('name is') || userInput.toLowerCase().includes('call it'))) {
-              setProjectDetails(prev => ({...prev, name: userInput, goal: prev?.goal || ''}));
-          }
-          if (!projectDetails?.goal && (userInput.toLowerCase().includes('build') || userInput.toLowerCase().includes('create'))) {
-              setProjectDetails(prev => ({...prev, name: prev?.name || 'New Project', goal: userInput}));
-          }
-           if (messages.length === 2) {
-                // Assume first user message is name, second is goal
-                const name = messages[1].parts[0].text;
-                setProjectDetails({ name: name, goal: userInput });
-           }
+      const firstUserMessage = messages.length === 1;
+      if (firstUserMessage) {
+          setProjectDetails({ name: userInput, goal: '' });
+      } else if (messages.length === 3 && projectDetails) {
+          setProjectDetails(prev => ({...prev!, goal: userInput}));
       }
 
       const userMessage: ChatMessage = { role: 'user', parts: [{ text: userInput }] };
@@ -174,13 +156,23 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
             });
         }
         
-        // Heuristic to detect when the conversation is ready for generation
-        if (text.toLowerCase().includes("shall i generate") || text.toLowerCase().includes("ready to create")) {
-            setIsFinished(true);
+        let parsedFiles = null;
+        try {
+            // Check if the response is a JSON array string
+            const cleanedText = text.trim().replace(/^```json\s*|```\s*$/g, '');
+            if (cleanedText.startsWith('[')) {
+                parsedFiles = JSON.parse(cleanedText) as FileSystemNode[];
+                setGeneratedFiles(parsedFiles);
+                setIsFinished(true); // Stop the chat, show preview
+            }
+        } catch (error) {
+           console.log("Not a JSON response, continuing conversation.");
         }
 
       } catch (error) {
         console.error("Error sending message to scaffolder:", error);
+         const errorMsg: ChatMessage = { role: 'model', parts: [{ text: "I'm sorry, I ran into an error. Please try again."}]};
+         setMessages(prev => [...prev, errorMsg]);
       } finally {
         setIsLoading(false);
       }
@@ -218,19 +210,30 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ onClose, onScaffoldCo
                     </div>
                 </div>
             )}
+            {isFinished && generatedFiles && (
+                 <div className="p-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold mb-2">{t('newProjectModal.preview')}</h3>
+                    <div className="p-3 bg-gray-100 dark:bg-gray-900 rounded-md max-h-48 overflow-y-auto">
+                        <FileTreePreview files={generatedFiles} />
+                    </div>
+                </div>
+            )}
             <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
            {isFinished ? (
-               <button
-                  onClick={handleFinalGeneration}
-                  disabled={isLoading || !projectDetails}
-                  className="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-green-300"
-                >
-                  {isLoading ? t('newProjectModal.generating') : t('newProjectModal.generateProject')}
-                </button>
+               <div className="space-y-2">
+                    <p className="text-sm text-center text-gray-600 dark:text-gray-400">{t('newProjectModal.confirmMessage')}</p>
+                    <button
+                        onClick={handleCreateProject}
+                        disabled={isLoading || !projectDetails}
+                        className="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-green-300"
+                        >
+                        {isLoading ? t('newProjectModal.generating') : t('newProjectModal.generateProject')}
+                    </button>
+               </div>
            ) : (
              <form onSubmit={handleSubmit} className="flex gap-2">
               <input

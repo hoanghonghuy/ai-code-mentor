@@ -115,6 +115,7 @@ export interface UserData {
   activePathId: LearningPathId;
   aiLanguage?: string;
   lastSaved?: any;
+  theme: Theme;
   projectFiles: FileSystemNode[];
   openFileIds: string[];
   activeFileId: string | null;

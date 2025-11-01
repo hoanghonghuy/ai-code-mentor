@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
-import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile } from './types';
+import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile, Theme } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
 import ChatInterface from './components/ChatInterface';
@@ -18,6 +18,7 @@ import LivePreview from './components/LivePreview';
 import ChallengeModal from './components/ChallengeModal';
 
 const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
+const THEME_KEY = 'ai-mentor-theme';
 
 const getInitialAchievements = (pathTitle: string): Achievement[] => {
     const definitions: Omit<Achievement, 'unlocked'>[] = [
@@ -64,6 +65,7 @@ const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> =>
     bookmarkedLessonIds: [],
     customDocs: ['https://react.dev', 'https://developer.mozilla.org/'],
     aiLanguage: 'en',
+    theme: (localStorage.getItem(THEME_KEY) as Theme) || 'dark',
     projectFiles: JSON.parse(JSON.stringify(defaultProjectFiles)),
     openFileIds: ['file-1', 'file-3'],
     activeFileId: 'file-3',
@@ -123,7 +125,7 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
 
   // App state
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem(THEME_KEY) as Theme) || 'dark');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -172,10 +174,12 @@ const App: React.FC = () => {
   const [projectFiles, setProjectFiles] = useState<FileSystemNode[]>(initialState.projectFiles);
   const [openFileIds, setOpenFileIds] = useState<string[]>(initialState.openFileIds);
   const [activeFileId, setActiveFileId] = useState<string | null>(initialState.activeFileId);
-  const [projectOutput, setProjectOutput] = useState<any>('');
+  const [projectOutput, setProjectOutput] = useState<{ run: any; analysis: string; explanation: string }>({ run: '', analysis: '', explanation: '' });
+  const [livePreviewConsoleLogs, setLivePreviewConsoleLogs] = useState<any[]>([]);
   const [isProjectRunning, setIsProjectRunning] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
 
   // Settings State
   const [aiLanguage, setAiLanguage] = useState(initialState.aiLanguage);
@@ -196,6 +200,7 @@ const App: React.FC = () => {
   const hasLoadedData = useRef(false);
 
   useEffect(() => {
+    localStorage.setItem(THEME_KEY, theme);
     const lightTheme = document.getElementById('light-hljs-theme') as HTMLLinkElement | null;
     const darkTheme = document.getElementById('dark-hljs-theme') as HTMLLinkElement | null;
 
@@ -209,6 +214,16 @@ const App: React.FC = () => {
       if (darkTheme) darkTheme.disabled = true;
     }
   }, [theme]);
+
+  useEffect(() => {
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data && event.data.source === 'live-preview-console') {
+        setLivePreviewConsoleLogs(prev => [...prev, { level: event.data.level, args: event.data.args }]);
+      }
+    };
+    window.addEventListener('message', handleIframeMessage);
+    return () => window.removeEventListener('message', handleIframeMessage);
+  }, []);
   
   useEffect(() => {
       if (activeView === 'learningPath') {
@@ -234,6 +249,7 @@ const App: React.FC = () => {
       setNotes(freshState.notes);
       setBookmarkedLessonIds(freshState.bookmarkedLessonIds);
       setAiLanguage(freshState.aiLanguage);
+      setTheme(freshState.theme);
       setProjectFiles(freshState.projectFiles);
       setOpenFileIds(freshState.openFileIds);
       setActiveFileId(freshState.activeFileId);
@@ -265,6 +281,7 @@ const App: React.FC = () => {
                 setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
                 setCustomDocs(data.customDocs || freshState.customDocs);
                 setAiLanguage(data.aiLanguage || freshState.aiLanguage);
+                setTheme(data.theme || freshState.theme);
                 setProjectFiles(data.projectFiles || freshState.projectFiles);
                 setOpenFileIds(data.openFileIds || freshState.openFileIds);
                 setActiveFileId(data.activeFileId || freshState.activeFileId);
@@ -292,6 +309,7 @@ const App: React.FC = () => {
                      setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
                      setCustomDocs(data.customDocs || freshState.customDocs);
                      setAiLanguage(data.aiLanguage || freshState.aiLanguage);
+                     setTheme((data.theme as Theme) || freshState.theme);
                      setProjectFiles(data.projectFiles || freshState.projectFiles);
                      setOpenFileIds(data.openFileIds || freshState.openFileIds);
                      setActiveFileId(data.activeFileId || freshState.activeFileId);
@@ -326,6 +344,7 @@ const App: React.FC = () => {
         bookmarkedLessonIds,
         customDocs,
         aiLanguage,
+        theme,
         projectFiles,
         openFileIds,
         activeFileId,
@@ -355,7 +374,7 @@ const App: React.FC = () => {
     user, authLoading,
     activePathId, learningPath, activeLessonId, learningPathHistories,
     customProjects, activeCustomProjectId, points, achievements,
-    notes, bookmarkedLessonIds, customDocs, aiLanguage,
+    notes, bookmarkedLessonIds, customDocs, aiLanguage, theme,
     projectFiles, openFileIds, activeFileId
   ]);
 
@@ -734,12 +753,12 @@ const App: React.FC = () => {
 
   const handleRunProject = useCallback(async () => {
     if (!ai) {
-        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
+        setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: "Gemini AI not initialized. Check API Key."} }));
         return;
     };
 
     setIsProjectRunning(true);
-    setProjectOutput(t('playground.executing'));
+    setProjectOutput(prev => ({ ...prev, run: t('playground.executing') }));
     
     const projectStructure = serializeProject(projectFiles);
     const prompt = `You are a web project simulator. Your task is to analyze the provided HTML, CSS, and JavaScript files and generate a single JSON object representing the final output.
@@ -789,16 +808,16 @@ ${projectStructure}`;
       
       try {
         const parsedJson = JSON.parse(rawText);
-        setProjectOutput(parsedJson);
+        setProjectOutput(prev => ({ ...prev, run: parsedJson }));
       } catch (parseError) {
         console.error('Failed to parse AI response as JSON:', parseError);
         // Fallback to showing the raw text if JSON parsing fails
-        setProjectOutput({ type: 'raw', rawText: rawText || 'The AI returned an invalid format.' });
+        setProjectOutput(prev => ({ ...prev, run: { type: 'raw', rawText: rawText || 'The AI returned an invalid format.' }}));
       }
 
     } catch (error) {
       console.error('Error executing project:', error);
-      setProjectOutput({ type: 'error', error: 'An unexpected error occurred while running the project.' });
+      setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'An unexpected error occurred while running the project.' }}));
     } finally {
       setIsProjectRunning(false);
     }
@@ -806,21 +825,21 @@ ${projectStructure}`;
 
   const handleAnalyzeCode = useCallback(async (code: string, language: string) => {
     if (!ai) {
-        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
+        setProjectOutput(prev => ({ ...prev, analysis: "Gemini AI not initialized. Check API Key." }));
         return;
     };
 
     setIsAnalyzing(true);
-    setProjectOutput(t('codeEditor.analyzing'));
+    setProjectOutput(prev => ({ ...prev, analysis: t('codeEditor.analyzing') }));
 
     const prompt = `You are a code analysis tool. Analyze the following ${language} code for syntax errors, logical bugs, and style improvements. Provide a clear, concise report formatted in Markdown. If no issues are found, respond with "No issues found."\n\n\`\`\`${language}\n${code}\n\`\`\``;
 
     try {
         const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-        setProjectOutput({ type: 'analysis', content: response.text });
+        setProjectOutput(prev => ({ ...prev, analysis: response.text }));
     } catch (error) {
         console.error('Error analyzing code:', error);
-        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while analyzing the code.' });
+        setProjectOutput(prev => ({ ...prev, analysis: 'An unexpected error occurred while analyzing the code.' }));
     } finally {
         setIsAnalyzing(false);
     }
@@ -828,12 +847,12 @@ ${projectStructure}`;
 
   const handleExplainCode = useCallback(async (selectedCode: string, fileContext: string, language: string) => {
     if (!ai) {
-        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
+        setProjectOutput(prev => ({ ...prev, explanation: "Gemini AI not initialized. Check API Key." }));
         return;
     };
 
     setIsAnalyzing(true); // Reuse the same loading state
-    setProjectOutput(t('codeEditor.analyzing'));
+    setProjectOutput(prev => ({ ...prev, explanation: t('codeEditor.analyzing') }));
 
     const prompt = `You are an expert code explainer. A user has selected a snippet of code and wants to understand it.
     
@@ -853,10 +872,10 @@ ${projectStructure}`;
 
     try {
         const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-        setProjectOutput({ type: 'analysis', content: response.text });
+        setProjectOutput(prev => ({...prev, explanation: response.text }));
     } catch (error) {
         console.error('Error explaining code:', error);
-        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while explaining the code.' });
+        setProjectOutput(prev => ({...prev, explanation: 'An unexpected error occurred while explaining the code.' }));
     } finally {
         setIsAnalyzing(false);
     }
@@ -874,9 +893,24 @@ ${projectStructure}`;
         handleUpdateFileContent(fileId, response.text);
     } catch (error) {
         console.error('Error suggesting completion:', error);
-        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while suggesting code.' });
+        setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'An unexpected error occurred while suggesting code.' }}));
     } finally {
         setIsSuggesting(false);
+    }
+  }, [ai, handleUpdateFileContent]);
+
+  const handleFormatCode = useCallback(async (fileId: string, code: string, language: string) => {
+    if (!ai || !fileId) return;
+    setIsFormatting(true);
+    const prompt = `You are a code formatter. Your task is to format the following ${language} code according to standard conventions. Only provide the formatted code in your response. Do not add any explanation, comments, or markdown formatting like \`\`\`. Your response must be only the raw, formatted code.\n\nCode to format:\n\`\`\`${language}\n${code}\n\`\`\``;
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        handleUpdateFileContent(fileId, response.text);
+    } catch (error) {
+        console.error('Error formatting code:', error);
+        setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'An unexpected error occurred while formatting code.' } }));
+    } finally {
+        setIsFormatting(false);
     }
   }, [ai, handleUpdateFileContent]);
   
@@ -1271,6 +1305,19 @@ ${projectStructure}`;
     }
   }, [ai, activeLesson]);
 
+  const handleSolveChallenge = useCallback((challengeText: string) => {
+    const playgroundCode = `// Challenge: ${challengeText.split('\n')[0]}\n\n/*\n${challengeText}\n*/\n\n// Start your solution here\n`;
+    // For simplicity, we'll update the JS playground code
+    // In a real app, you might create a new file or use a dedicated component
+    // This is a placeholder for a more robust implementation.
+    // For now, let's just switch to the playground.
+    setActiveMainView('tools');
+    setActiveRightTab('playground');
+    // A more advanced implementation would pass the code to the playground component.
+    // We'll leave this as a UX improvement for now.
+    setIsChallengeModalOpen(false);
+  }, []);
+
 
   if (authLoading) {
     return (
@@ -1429,9 +1476,11 @@ ${projectStructure}`;
                     isRunning={isProjectRunning}
                     isAnalyzing={isAnalyzing}
                     isSuggesting={isSuggesting}
+                    isFormatting={isFormatting}
                     onAnalyzeCode={handleAnalyzeCode}
                     onSuggestCompletion={handleSuggestCompletion}
                     onExplainCode={handleExplainCode}
+                    onFormatCode={handleFormatCode}
                     output={projectOutput}
                     onSetOutput={setProjectOutput}
                     onCreateFile={handleCreateFile}
@@ -1441,7 +1490,7 @@ ${projectStructure}`;
                     onMoveNode={handleMoveNode}
                   />
                 )}
-                {activeRightTab === 'livePreview' && <LivePreview files={projectFiles} />}
+                {activeRightTab === 'livePreview' && <LivePreview files={projectFiles} consoleLogs={livePreviewConsoleLogs} onClearConsole={() => setLivePreviewConsoleLogs([])}/>}
                 {activeRightTab === 'playground' && <CodePlayground onFirstRun={handleFirstCodeRun} />}
                 {activeRightTab === 'notes' && (
                   <NotesPanel 
@@ -1499,6 +1548,7 @@ ${projectStructure}`;
             isOpen={isChallengeModalOpen}
             onClose={() => setIsChallengeModalOpen(false)}
             challengeText={challengeContent}
+            onSolve={handleSolveChallenge}
         />
        )}
     </div>
