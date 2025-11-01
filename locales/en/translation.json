@@ -28,7 +28,9 @@
     },
     "newPath": "Create New Path",
     "standardPaths": "Standard Paths",
-    "yourPaths": "Your Paths"
+    "yourPaths": "Your Paths",
+    "deletePath": "Delete Path",
+    "managePaths": "Manage Paths"
   },
   "chat": {
     "title": "AI Mentor Chat",
@@ -118,6 +120,12 @@
     "title": "Delete Project",
     "message": "Are you sure you want to delete \"{{projectName}}\"? This action cannot be undone.",
     "confirm": "Delete"
+  },
+  "deletePathModal": {
+    "title": "Delete Learning Path",
+    "message": "Are you sure you want to delete the learning path \"{{pathName}}\"? All your learning progress and data in this path will be permanently lost. This action cannot be undone.",
+    "confirm": "Delete Path",
+    "warning": "Warning: Deleting this path cannot be recovered!"
   },
   "clearHistoryModal": {
     "title": "Clear Chat History",
