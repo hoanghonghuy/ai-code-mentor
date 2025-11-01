@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { LearningPath, Lesson, LearningModule, Achievement, LearningPathId, ProjectStep, CustomProject, Priority } from '../types';
-import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon, FlagIcon, MapIcon } from './icons';
+import { ChevronDownIcon, XIcon, CheckCircleIcon, BookmarkIcon, SettingsIcon, BriefcaseIcon, CodeIcon, FolderIcon, FlagIcon, MapIcon, TrashIcon, MoreVerticalIcon } from './icons';
 import AchievementsView from './AchievementsView';
 import SettingsView from './SettingsView';
 import CustomProjectView from './CustomProjectView';
@@ -37,6 +37,7 @@ interface LearningPathProps {
   onAiLanguageChange: (lang: string) => void;
   customLearningPaths: LearningPath[];
   onNewPath: () => void;
+  onDeletePath: (path: LearningPath) => void;
 }
 
 const ProgressBar: React.FC<{ value: number }> = ({ value }) => (
@@ -232,10 +233,11 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const { t } = useTranslation();
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange, customLearningPaths, onNewPath } = props;
+  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange, customLearningPaths, onNewPath, onDeletePath } = props;
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'priority'>('default');
+  const [showPathMenu, setShowPathMenu] = useState(false);
   
   const allItems = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
   const completedItems = allItems.filter(item => item.completed).length;
@@ -266,6 +268,10 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
 
     return sorted;
   }, [learningPath.modules, sortBy]);
+
+  // Check if current path is a custom path
+  const isCurrentPathCustom = customLearningPaths.some(p => p.id === activePathId);
+  const currentCustomPath = customLearningPaths.find(p => p.id === activePathId);
 
   const TabButton: React.FC<{tabId: 'lessons' | 'achievements' | 'settings', children: React.ReactNode}> = ({ tabId, children }) => (
     <button
@@ -308,29 +314,66 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
                 <>
                     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                         <div className="mb-4 flex items-center gap-2">
-                            <select
-                                id="learning-path-select"
-                                value={activePathId}
-                                onChange={(e) => onSelectPath(e.target.value)}
-                                disabled={isLoading}
-                                className="flex-1 w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
-                            >
-                                <optgroup label={t('sidebar.standardPaths')}>
-                                    {allPaths.map(path => (
-                                        <option key={path.id} value={path.id}>{path.title}</option>
-                                    ))}
-                                </optgroup>
-                                {customLearningPaths.length > 0 && (
-                                    <optgroup label={t('sidebar.yourPaths')}>
-                                        {customLearningPaths.map(path => (
+                            <div className="flex-1 relative">
+                                <select
+                                    id="learning-path-select"
+                                    value={activePathId}
+                                    onChange={(e) => onSelectPath(e.target.value)}
+                                    disabled={isLoading}
+                                    className="w-full p-2 text-sm bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                                >
+                                    <optgroup label={t('sidebar.standardPaths')}>
+                                        {allPaths.map(path => (
                                             <option key={path.id} value={path.id}>{path.title}</option>
                                         ))}
                                     </optgroup>
+                                    {customLearningPaths.length > 0 && (
+                                        <optgroup label={t('sidebar.yourPaths')}>
+                                            {customLearningPaths.map(path => (
+                                                <option key={path.id} value={path.id}>{path.title}</option>
+                                            ))}
+                                        </optgroup>
+                                    )}
+                                </select>
+                            </div>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setShowPathMenu(!showPathMenu)} 
+                                    disabled={isLoading} 
+                                    className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50" 
+                                    title={t('sidebar.managePaths')}
+                                >
+                                    <MoreVerticalIcon className="w-5 h-5"/>
+                                </button>
+                                {showPathMenu && (
+                                    <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 border border-gray-200 dark:border-gray-700 z-20">
+                                        <button 
+                                            onClick={() => { onNewPath(); setShowPathMenu(false); }} 
+                                            disabled={isLoading} 
+                                            className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                                        >
+                                            <MapIcon className="w-4 h-4" />
+                                            {t('sidebar.newPath')}
+                                        </button>
+                                        {isCurrentPathCustom && currentCustomPath && (
+                                            <button 
+                                                onClick={() => { onDeletePath(currentCustomPath); setShowPathMenu(false); }} 
+                                                disabled={isLoading} 
+                                                className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                                            >
+                                                <TrashIcon className="w-4 h-4" />
+                                                {t('sidebar.deletePath')}
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
-                            </select>
-                            <button onClick={onNewPath} disabled={isLoading} className="p-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50" title={t('sidebar.newPath')}>
-                                <MapIcon className="w-5 h-5"/>
-                            </button>
+                                {showPathMenu && (
+                                    <div 
+                                        className="fixed inset-0 z-10" 
+                                        onClick={() => setShowPathMenu(false)}
+                                    />
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-gray-500">{Math.round(overallProgress)}%</span>
