@@ -13,21 +13,31 @@ interface CreatePathModalProps {
 }
 
 const PathPreview: React.FC<{ path: Omit<LearningPath, 'id'> }> = ({ path }) => {
+    // FIXED: Safe array handling to prevent undefined errors
+    const safeModules = Array.isArray(path.modules) ? path.modules : [];
+    
     return (
         <div className="space-y-3">
-            {path.modules.map((module, index) => (
-                <div key={index}>
-                    <h4 className="font-semibold text-sm flex items-center gap-2">
-                        {module.project ? <BriefcaseIcon className="w-4 h-4 text-primary-500" /> : <CodeIcon className="w-4 h-4 text-primary-500" />}
-                        {module.title}
-                    </h4>
-                    <ul className="pl-6 text-xs list-disc list-inside text-gray-600 dark:text-gray-400">
-                        {(module.lessons || module.project?.steps || []).map(item => (
-                            <li key={item.id} className="truncate">{item.title}</li>
-                        ))}
-                    </ul>
-                </div>
-            ))}
+            {safeModules.map((module, index) => {
+                // FIXED: Safe handling of lessons and project steps
+                const lessons = Array.isArray(module.lessons) ? module.lessons : [];
+                const projectSteps = Array.isArray(module.project?.steps) ? module.project.steps : [];
+                const items = [...lessons, ...projectSteps];
+                
+                return (
+                    <div key={index}>
+                        <h4 className="font-semibold text-sm flex items-center gap-2">
+                            {module.project ? <BriefcaseIcon className="w-4 h-4 text-primary-500" /> : <CodeIcon className="w-4 h-4 text-primary-500" />}
+                            {module.title || 'Untitled Module'}
+                        </h4>
+                        <ul className="pl-6 text-xs list-disc list-inside text-gray-600 dark:text-gray-400">
+                            {items.map((item, itemIndex) => (
+                                <li key={item.id || `item-${itemIndex}`} className="truncate">{item.title || 'Untitled Item'}</li>
+                            ))}
+                        </ul>
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -129,9 +139,21 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
             const cleanedText = text.trim().replace(/^```json\s*|```\s*$/g, '');
             if (cleanedText.startsWith('{')) {
                 const parsedPath = JSON.parse(cleanedText) as Omit<LearningPath, 'id'>;
-                if(parsedPath.title && parsedPath.modules) {
-                    setGeneratedPath(parsedPath);
-                    setIsFinished(true);
+                // FIXED: Validate the parsed path structure before setting it
+                if (parsedPath && typeof parsedPath === 'object' && parsedPath.title && Array.isArray(parsedPath.modules)) {
+                    // Additional validation to ensure modules have proper structure
+                    const validModules = parsedPath.modules.every(module => 
+                        module && typeof module === 'object' && module.title
+                    );
+                    
+                    if (validModules) {
+                        setGeneratedPath(parsedPath);
+                        setIsFinished(true);
+                    } else {
+                        console.warn('Generated path has invalid module structure');
+                    }
+                } else {
+                    console.warn('Generated path has invalid structure');
                 }
             }
         } catch (error) {
