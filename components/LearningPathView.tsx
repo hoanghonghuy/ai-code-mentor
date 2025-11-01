@@ -79,7 +79,7 @@ interface ModuleViewProps {
     isLoading: boolean;
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds, onToggleBookmark, onSetPriority, showOnlyBookmarked, isLoading }) => {
+const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeLessonId, bookmarkedLessonIds = [], onToggleBookmark, onSetPriority, showOnlyBookmarked, isLoading }) => {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = React.useState(true);
     const [priorityMenuOpenFor, setPriorityMenuOpenFor] = useState<string | null>(null);
@@ -123,7 +123,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
     const renderItemList = (items: (Lesson | ProjectStep)[]) => (
         <ul className="space-y-1 ml-2">
-            {items.map(item => {
+            {(items || []).map(item => {
                 const isActive = activeLessonId === item.id;
                 const isCompleted = item.completed;
                 const isBookmarked = bookmarkedLessonIds.includes(item.id);
@@ -167,9 +167,10 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
     
     if (module.project) {
         const project = module.project;
-        const stepsToShow = showOnlyBookmarked ? project.steps.filter(s => bookmarkedLessonIds.includes(s.id)) : project.steps;
-        const completedSteps = project.steps.filter(s => s.completed).length;
-        const totalSteps = project.steps.length;
+        const safeSteps = Array.isArray(project.steps) ? project.steps : [];
+        const stepsToShow = showOnlyBookmarked ? safeSteps.filter(s => bookmarkedLessonIds.includes(s.id)) : safeSteps;
+        const completedSteps = safeSteps.filter(s => s.completed).length;
+        const totalSteps = safeSteps.length;
         const progress = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 
         if (stepsToShow.length === 0 && showOnlyBookmarked) return null;
@@ -200,7 +201,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
         );
     }
     
-    if (!module.lessons) return null;
+    if (!module.lessons || !Array.isArray(module.lessons)) return null;
 
     const lessonsToShow = showOnlyBookmarked ? module.lessons.filter(l => bookmarkedLessonIds.includes(l.id)) : module.lessons;
     const completedLessons = module.lessons.filter(l => l.completed).length;
@@ -232,13 +233,53 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, onSelectLesson, activeL
 
 const LearningPathView: React.FC<LearningPathProps> = (props) => {
   const { t } = useTranslation();
-  const { activeView, setActiveView, learningPath, onSelectLesson, activeLessonId, isOpen, setIsOpen, achievements, allPaths, activePathId, onSelectPath, bookmarkedLessonIds, onToggleBookmark, onSetPriority, customDocs, onAddDoc, onRemoveDoc, customProjects, activeCustomProjectId, onSelectCustomProject, onNewProject, onEditProject, onDeleteProject, isLoading, uiLanguage, onUiLanguageChange, aiLanguage, onAiLanguageChange, customLearningPaths, onNewPath } = props;
+  const {
+    activeView,
+    setActiveView,
+    learningPath,
+    onSelectLesson,
+    activeLessonId,
+    isOpen,
+    setIsOpen,
+    achievements = [],
+    allPaths = [],
+    activePathId,
+    onSelectPath,
+    bookmarkedLessonIds = [],
+    onToggleBookmark,
+    onSetPriority,
+    customDocs = [],
+    onAddDoc,
+    onRemoveDoc,
+    customProjects = [],
+    activeCustomProjectId,
+    onSelectCustomProject,
+    onNewProject,
+    onEditProject,
+    onDeleteProject,
+    isLoading,
+    uiLanguage,
+    onUiLanguageChange,
+    aiLanguage,
+    onAiLanguageChange,
+    customLearningPaths = [],
+    onNewPath,
+  } = props;
+
   const [activeTab, setActiveTab] = useState<'lessons' | 'achievements' | 'settings'>('lessons');
   const [showOnlyBookmarked, setShowOnlyBookmarked] = useState(false);
   const [sortBy, setSortBy] = useState<'default' | 'priority'>('default');
   
-  const allItems = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []);
-  const completedItems = allItems.filter(item => item.completed).length;
+  // SAFETY: Guard against undefined learningPath or modules
+  const safeLearningPath = learningPath || ({ title: 'Loading...', modules: [] } as LearningPath);
+  const safeModules = Array.isArray(safeLearningPath.modules) ? safeLearningPath.modules : [];
+  
+  const allItems = safeModules.flatMap(m => {
+    const lessons = Array.isArray(m.lessons) ? m.lessons : [];
+    const steps = Array.isArray(m.project?.steps) ? m.project.steps : [];
+    return lessons.length > 0 ? lessons : steps;
+  });
+  const completedItems = allItems.filter(item => item?.completed).length;
   const overallProgress = allItems.length > 0 ? (completedItems / allItems.length) * 100 : 0;
 
   const priorityOrder: Record<Priority, number> = {
@@ -250,22 +291,22 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
 
   const sortedModules = useMemo(() => {
     if (sortBy === 'default') {
-        return learningPath.modules;
+        return safeModules;
     }
 
-    const sorted = JSON.parse(JSON.stringify(learningPath.modules));
+    const sorted = JSON.parse(JSON.stringify(safeModules));
     
     sorted.forEach((module: LearningModule) => {
-        if (module.lessons) {
-            module.lessons.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+        if (Array.isArray(module.lessons)) {
+            module.lessons.sort((a, b) => priorityOrder[a.priority || 'none'] - priorityOrder[b.priority || 'none']);
         }
-        if (module.project?.steps) {
-            module.project.steps.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+        if (Array.isArray(module.project?.steps)) {
+            module.project.steps.sort((a, b) => priorityOrder[a.priority || 'none'] - priorityOrder[b.priority || 'none']);
         }
     });
 
     return sorted;
-  }, [learningPath.modules, sortBy]);
+  }, [safeModules, sortBy]);
 
   const TabButton: React.FC<{tabId: 'lessons' | 'achievements' | 'settings', children: React.ReactNode}> = ({ tabId, children }) => (
     <button
@@ -293,7 +334,7 @@ const LearningPathView: React.FC<LearningPathProps> = (props) => {
             <div className="flex-shrink-0">
                 <div className="flex items-start justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-lg font-bold">
-                        {activeView === 'learningPath' ? learningPath.title : t('sidebar.myProjects')}
+                        {activeView === 'learningPath' ? safeLearningPath.title : t('sidebar.myProjects')}
                     </h2>
                     <button onClick={() => setIsOpen(false)} className="md:hidden p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">
                         <XIcon className="w-5 h-5" />
