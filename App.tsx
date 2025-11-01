@@ -139,6 +139,7 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<CustomProject | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
+  const [pathToDelete, setPathToDelete] = useState<LearningPath | null>(null);
   const [historyToClear, setHistoryToClear] = useState<{ view: 'learningPath' | 'customProject', id: string } | null>(null);
   const [nodeToDelete, setNodeToDelete] = useState<FileSystemNode | null>(null);
   const [challengeContent, setChallengeContent] = useState<string | null>(null);
@@ -661,6 +662,63 @@ const App: React.FC = () => {
     setIsCreatePathModalOpen(false);
   }, []);
 
+  // NEW: Delete custom learning path function
+  const handleDeleteCustomPath = useCallback((pathToDelete: LearningPath) => {
+    // Remove the path from customLearningPaths
+    setCustomLearningPaths(prev => prev.filter(p => p.id !== pathToDelete.id));
+    
+    // Clean up related data for this path
+    const pathLessonIds = pathToDelete.modules.flatMap(m => {
+      const lessonIds = m.lessons?.map(l => l.id) || [];
+      const stepIds = m.project?.steps.map(s => s.id) || [];
+      return [...lessonIds, ...stepIds];
+    });
+    
+    // Remove notes for this path's lessons
+    setNotes(prev => {
+      const newNotes = { ...prev };
+      pathLessonIds.forEach(id => delete newNotes[id]);
+      return newNotes;
+    });
+    
+    // Remove bookmark data for this path's lessons
+    setBookmarkedLessonIds(prev => prev.filter(id => !pathLessonIds.includes(id)));
+    
+    // Remove chat histories for this path's lessons
+    setLearningPathHistories(prev => {
+      const newHistories = { ...prev };
+      pathLessonIds.forEach(id => delete newHistories[id]);
+      return newHistories;
+    });
+    
+    // Remove chat history for this path
+    setChatHistory(prev => {
+      const newChatHistory = { ...prev };
+      pathLessonIds.forEach(id => delete newChatHistory[id]);
+      return newChatHistory;
+    });
+    
+    // If we're currently on the deleted path, switch to a default path
+    if (activePathId === pathToDelete.id) {
+      if (user) {
+        // For logged-in users, switch to js-basics
+        const defaultPath = learningPaths['js-basics'];
+        setActivePathId('js-basics');
+        setLearningPath(clone(defaultPath));
+        setAchievements(getInitialAchievements(defaultPath.title));
+        setPoints(0);
+        setActiveLessonId(null);
+        setActiveView('learningPath');
+        setMessages([]);
+      } else {
+        // For guest users, reset to fresh state
+        resetStateForGuest('js-basics');
+      }
+    }
+    
+    setPathToDelete(null);
+  }, [activePathId, user, resetStateForGuest]);
+
   const handleCreateProjectFromScaffold = useCallback((name: string, goal: string, files: FileSystemNode[]) => {
     const newProject: CustomProject = { id: `proj-${Date.now()}`, name, goal, chatHistory: [] };
     setCustomProjects(prev => [...prev, newProject]);
@@ -797,6 +855,7 @@ const App: React.FC = () => {
           onAiLanguageChange={setAiLanguage}
           customLearningPaths={customLearningPaths}
           onNewPath={() => setIsCreatePathModalOpen(true)}
+          onDeletePath={setPathToDelete}
         />
         <main className="flex flex-col flex-1 p-2 md:p-4 gap-4 overflow-hidden">
           {!user && (
@@ -887,6 +946,16 @@ const App: React.FC = () => {
       )}
       {projectToDelete && (
         <ConfirmationModal title={t('deleteProjectModal.title')} message={t('deleteProjectModal.message', { projectName: projectToDelete.name })} onConfirm={handleDeleteCustomProject} onClose={() => setProjectToDelete(null)} confirmText={t('deleteProjectModal.confirm')} />
+      )}
+      {pathToDelete && (
+        <ConfirmationModal 
+          title={t('deletePathModal.title')} 
+          message={t('deletePathModal.message', { pathName: pathToDelete.title })} 
+          onConfirm={() => handleDeleteCustomPath(pathToDelete)} 
+          onClose={() => setPathToDelete(null)} 
+          confirmText={t('deletePathModal.confirm')} 
+          isDestructive={true}
+        />
       )}
       {historyToClear && (
         <ConfirmationModal title={t('clearHistoryModal.title')} message={t('clearHistoryModal.message')} onConfirm={handleConfirmClearHistory} onClose={() => setHistoryToClear(null)} confirmText={t('clearHistoryModal.confirm')} />
