@@ -73,7 +73,7 @@ const PathSelector: React.FC<PathSelectorProps> = ({
           </div>
           <div className="min-w-0 flex-1 text-left">
             <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {currentPath?.title || 'Select a path'}
+              {currentPath?.title || t('sidebar.selectPath')}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {isCurrentPathCustom ? t('sidebar.yourPaths') : t('sidebar.standardPaths')}
@@ -126,7 +126,7 @@ const PathSelector: React.FC<PathSelectorProps> = ({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{path.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {path.modules.length} modules
+                        {t('sidebar.modulesCount', { count: path.modules.length })}
                       </p>
                     </div>
                     {activePathId === path.id && (
@@ -167,7 +167,7 @@ const PathSelector: React.FC<PathSelectorProps> = ({
                             {path.title}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {path.modules.length} modules • Custom
+                            {t('sidebar.modulesCount', { count: path.modules.length })} • {t('sidebar.customLabel')}
                           </p>
                         </div>
                         {activePathId === path.id && (
