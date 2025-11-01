@@ -5,7 +5,8 @@ import {
   isStandardPath,
   createCustomPath,
   getPathSwitchState,
-  validateLearningPath 
+  validateLearningPath,
+  repairLearningPath
 } from '../services/pathService';
 
 /**
@@ -111,23 +112,63 @@ export const usePathManagement = (
     }
   }, [user, customLearningPaths, resetStateForGuest, setActivePathId, setLearningPath, setAchievements, setPoints, setActiveLessonId, setLearningPathHistories, setNotes, setBookmarkedLessonIds, setActiveView, setMessages, setChatHistory]);
 
+  // HOTFIX: Enhanced custom path creation with automatic repair
   const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
+    console.log('Creating custom path with data:', pathData);
+    
     // Create temporary path for validation
     const tempPath = { ...pathData, id: 'temp' };
-    if (!validateLearningPath(tempPath)) {
-      console.error('Invalid path data structure provided for creation');
-      return;
+    
+    let finalPath: LearningPath;
+    
+    if (validateLearningPath(tempPath)) {
+      // Path is valid, use as-is
+      console.log('Path data is valid, proceeding with creation');
+      finalPath = createCustomPath(pathData);
+    } else {
+      // Path validation failed, attempt repair
+      console.warn('Path validation failed, attempting repair...');
+      const repairedPathData = repairLearningPath(pathData);
+      
+      if (repairedPathData && validateLearningPath(repairedPathData)) {
+        console.log('Successfully repaired path data');
+        // Use repaired data, but assign new ID via createCustomPath
+        const { id, ...repairedWithoutId } = repairedPathData;
+        finalPath = createCustomPath(repairedWithoutId);
+      } else {
+        // Repair failed, create minimal valid path
+        console.warn('Repair failed, creating minimal path fallback');
+        const fallbackPathData: Omit<LearningPath, 'id'> = {
+          title: pathData.title || 'Custom Learning Path',
+          description: pathData.description || 'Custom learning path created by user',
+          modules: [
+            {
+              title: 'Getting Started',
+              description: 'Begin your learning journey',
+              lessons: [
+                {
+                  id: `lesson-${Date.now()}`,
+                  title: 'Introduction',
+                  prompt: 'Welcome to your custom learning path! Let\'s begin with the basics.',
+                  completed: false,
+                  priority: 'none',
+                }
+              ]
+            }
+          ]
+        };
+        finalPath = createCustomPath(fallbackPathData);
+      }
     }
-
-    const newPath = createCustomPath(pathData);
-    console.log(`Created new custom path: ${newPath.title}`);
+    
+    console.log('Final path to be created:', finalPath.title);
     
     // Update states in batch to avoid race conditions
     setCustomLearningPaths(prev => {
-      const newCustomPaths = [...prev, newPath];
+      const newCustomPaths = [...prev, finalPath];
       
       // Switch to new path immediately using the newly created object
-      const switchState = getPathSwitchState(newPath, true);
+      const switchState = getPathSwitchState(finalPath, true);
       setActivePathId(switchState.activePathId);
       setLearningPath(switchState.learningPath);
       setAchievements(switchState.achievements);
