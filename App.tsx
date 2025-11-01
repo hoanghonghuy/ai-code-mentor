@@ -18,7 +18,12 @@ import LivePreview from './components/LivePreview';
 import ChallengeModal from './components/ChallengeModal';
 import CreatePathModal from './components/CreatePathModal';
 
-const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
+// Import new services and utilities
+import { getStandardPath, getStandardPaths, getAllPathItems } from './services/pathService';
+import { saveUserData, loadUserData, clearUserData } from './services/storageService';
+import { usePathManagement } from './hooks/usePathManagement';
+import { safeArray, safeString, deepClone } from './utils/guards';
+
 const THEME_KEY = 'ai-mentor-theme';
 const API_KEY = process.env.API_KEY;
 
@@ -33,17 +38,6 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
   return defs.map(a => ({ ...a, unlocked: false }));
 };
 
-const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-
-const getInitialLearningPath = (pathId: LearningPathId): LearningPath => {
-  const std = learningPaths[pathId];
-  if (!std) {
-    console.warn(`Learning path '${pathId}' not found. Fallback to 'js-basics'.`);
-    return clone(learningPaths['js-basics']);
-  }
-  return clone(std);
-};
-
 const defaultProjectFiles: FileSystemNode[] = [
   { id: 'file-1', name: 'index.html', type: 'file', content: `<!DOCTYPE html>\n<html>\n<head>\n  <title>My Project</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello, World!</h1>\n  <script src="script.js"></script>\n</body>\n</html>`, parentId: null },
   { id: 'file-2', name: 'style.css', type: 'file', content: `body {\n  font-family: sans-serif;\n}`, parentId: null },
@@ -51,7 +45,7 @@ const defaultProjectFiles: FileSystemNode[] = [
 ];
 
 const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> => {
-  const path = getInitialLearningPath(pathId);
+  const path = getStandardPath(pathId);
   return {
     activePathId: pathId,
     learningPath: path,
@@ -66,7 +60,7 @@ const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> =>
     customDocs: ['https://react.dev', 'https://developer.mozilla.org/'],
     aiLanguage: 'en',
     theme: (localStorage.getItem(THEME_KEY) as Theme) || 'dark',
-    projectFiles: clone(defaultProjectFiles),
+    projectFiles: deepClone(defaultProjectFiles),
     openFileIds: ['file-1', 'file-3'],
     activeFileId: 'file-3',
     customLearningPaths: [],
@@ -74,7 +68,7 @@ const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> =>
 };
 
 const findNodeAndParent = (nodes: FileSystemNode[], nodeId: string, parent: ProjectFolder | null = null): { node: FileSystemNode, parent: ProjectFolder | null } | null => {
-  for (const node of nodes) {
+  for (const node of safeArray(nodes)) {
     if (node.id === nodeId) return { node, parent };
     if (node.type === 'folder') {
       const found = findNodeAndParent(node.children, nodeId, node);
@@ -86,7 +80,7 @@ const findNodeAndParent = (nodes: FileSystemNode[], nodeId: string, parent: Proj
 
 const getUniqueName = (nodes: FileSystemNode[], baseName: string, isFolder: boolean, parentId: string | null): string => {
   const findParent = (all: FileSystemNode[], pId: string): ProjectFolder | null => {
-    for (const n of all) {
+    for (const n of safeArray(all)) {
       if (n.id === pId && n.type === 'folder') return n;
       if (n.type === 'folder') {
         const f = findParent(n.children, pId);
@@ -96,10 +90,10 @@ const getUniqueName = (nodes: FileSystemNode[], baseName: string, isFolder: bool
     return null;
   };
   const parentNode = parentId ? findParent(nodes, parentId) : null;
-  const siblingNodes = parentNode ? parentNode.children : nodes.filter(n => n.parentId === null);
+  const siblingNodes = parentNode ? safeArray(parentNode.children) : safeArray(nodes).filter(n => n.parentId === null);
 
-  const existing = new Set(siblingNodes.map(n => n.name));
-  let finalName = baseName;
+  const existing = new Set(siblingNodes.map(n => safeString(n.name)));
+  let finalName = safeString(baseName, 'untitled');
   let i = 1;
   const ext = isFolder ? '' : baseName.includes('.') ? `.${baseName.split('.').pop()}` : '';
   const base = isFolder ? baseName : baseName.includes('.') ? baseName.slice(0, baseName.lastIndexOf('.')) : baseName;
@@ -175,6 +169,50 @@ const App: React.FC = () => {
   const ai = useMemo(() => (API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null), []);
   const hasLoadedData = useRef(false);
 
+  const resetStateForGuest = useCallback((pathId: LearningPathId = 'js-basics') => {
+    const freshState = getInitialState(pathId);
+    setActivePathId(freshState.activePathId);
+    setLearningPath(freshState.learningPath);
+    setCustomLearningPaths(freshState.customLearningPaths);
+    setActiveLessonId(freshState.activeLessonId);
+    setLearningPathHistories(freshState.learningPathHistories);
+    setCustomProjects(freshState.customProjects);
+    setActiveCustomProjectId(freshState.activeCustomProjectId);
+    setPoints(freshState.points);
+    setAchievements(freshState.achievements);
+    setNotes(freshState.notes);
+    setBookmarkedLessonIds(freshState.bookmarkedLessonIds);
+    setAiLanguage(freshState.aiLanguage);
+    setTheme(freshState.theme);
+    setProjectFiles(freshState.projectFiles);
+    setOpenFileIds(freshState.openFileIds);
+    setActiveFileId(freshState.activeFileId);
+    setMessages([]);
+    setActiveView('learningPath');
+    setChatHistory({});
+  }, []);
+
+  // Use the new path management hook
+  const { handleSelectPath, handleCreateCustomPath } = usePathManagement(
+    user,
+    { activePathId, learningPath, customLearningPaths },
+    {
+      setActivePathId,
+      setLearningPath,
+      setCustomLearningPaths,
+      setAchievements,
+      setPoints,
+      setActiveLessonId,
+      setLearningPathHistories,
+      setNotes,
+      setBookmarkedLessonIds,
+      setActiveView,
+      setMessages,
+      setChatHistory,
+      resetStateForGuest,
+    }
+  );
+
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
     const light = document.getElementById('light-hljs-theme') as HTMLLinkElement | null;
@@ -204,63 +242,40 @@ const App: React.FC = () => {
     if (activeView === 'learningPath') {
       setMessages(learningPathHistories[activeLessonId || ''] || []);
     } else if (activeView === 'customProject' && activeCustomProjectId) {
-      const p = customProjects.find(p => p.id === activeCustomProjectId);
-      setMessages(p ? p.chatHistory : []);
+      const p = safeArray(customProjects).find(p => p.id === activeCustomProjectId);
+      setMessages(p ? safeArray(p.chatHistory) : []);
     } else {
       setMessages([]);
     }
   }, [activeView, activeLessonId, activeCustomProjectId, learningPathHistories, customProjects]);
 
-  const resetStateForGuest = useCallback((pathId: LearningPathId = 'js-basics') => {
-    const fresh = getInitialState(pathId);
-    setActivePathId(fresh.activePathId);
-    setLearningPath(fresh.learningPath);
-    setCustomLearningPaths(fresh.customLearningPaths);
-    setActiveLessonId(fresh.activeLessonId);
-    setLearningPathHistories(fresh.learningPathHistories);
-    setCustomProjects(fresh.customProjects);
-    setActiveCustomProjectId(fresh.activeCustomProjectId);
-    setPoints(fresh.points);
-    setAchievements(fresh.achievements);
-    setNotes(fresh.notes);
-    setBookmarkedLessonIds(fresh.bookmarkedLessonIds);
-    setAiLanguage(fresh.aiLanguage);
-    setTheme(fresh.theme);
-    setProjectFiles(fresh.projectFiles);
-    setOpenFileIds(fresh.openFileIds);
-    setActiveFileId(fresh.activeFileId);
-    setMessages([]);
-    setActiveView('learningPath');
-    setChatHistory({});
-  }, []);
-
+  // Enhanced auth state management with new storage service
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        localStorage.removeItem(GUEST_DATA_KEY);
+        clearUserData(null); // Clear localStorage
         setUser(currentUser);
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const snap = await getDoc(userDocRef);
-        if (snap.exists()) {
-          const data = snap.data() as UserData;
-          const fresh = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
-          setActivePathId(data.activePathId || fresh.activePathId);
-          setLearningPath(data.learningPath || fresh.learningPath);
-          setCustomLearningPaths(data.customLearningPaths || fresh.customLearningPaths);
-          setActiveLessonId(data.activeLessonId || null);
-          setLearningPathHistories(data.learningPathHistories || {});
-          setCustomProjects(data.customProjects || []);
-          setActiveCustomProjectId(data.activeCustomProjectId || null);
-          setPoints(data.points || 0);
-          setAchievements(data.achievements || getInitialAchievements(data.learningPath?.title || 'Learning Path'));
-          setNotes(data.notes || {});
-          setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
-          setCustomDocs(data.customDocs || fresh.customDocs);
-          setAiLanguage(data.aiLanguage || fresh.aiLanguage);
-          setTheme(data.theme || fresh.theme);
-          setProjectFiles(data.projectFiles || fresh.projectFiles);
-          setOpenFileIds(data.openFileIds || fresh.openFileIds);
-          setActiveFileId(data.activeFileId || fresh.activeFileId);
+        
+        const userData = await loadUserData(currentUser);
+        if (userData) {
+          const fresh = getInitialState((userData.activePathId as LearningPathId) || 'js-basics');
+          setActivePathId(userData.activePathId || fresh.activePathId);
+          setLearningPath(userData.learningPath || fresh.learningPath);
+          setCustomLearningPaths(safeArray(userData.customLearningPaths));
+          setActiveLessonId(userData.activeLessonId || null);
+          setLearningPathHistories(userData.learningPathHistories || {});
+          setCustomProjects(safeArray(userData.customProjects));
+          setActiveCustomProjectId(userData.activeCustomProjectId || null);
+          setPoints(userData.points || 0);
+          setAchievements(safeArray(userData.achievements).length ? userData.achievements : getInitialAchievements(userData.learningPath?.title || 'Learning Path'));
+          setNotes(userData.notes || {});
+          setBookmarkedLessonIds(safeArray(userData.bookmarkedLessonIds));
+          setCustomDocs(safeArray(userData.customDocs).length ? userData.customDocs : fresh.customDocs);
+          setAiLanguage(userData.aiLanguage || fresh.aiLanguage);
+          setTheme(userData.theme || fresh.theme);
+          setProjectFiles(safeArray(userData.projectFiles).length ? userData.projectFiles : fresh.projectFiles);
+          setOpenFileIds(safeArray(userData.openFileIds).length ? userData.openFileIds : fresh.openFileIds);
+          setActiveFileId(userData.activeFileId || fresh.activeFileId);
         } else {
           resetStateForGuest();
         }
@@ -268,32 +283,27 @@ const App: React.FC = () => {
       } else {
         setUser(null);
         hasLoadedData.current = false;
-        const guestJson = localStorage.getItem(GUEST_DATA_KEY);
-        if (guestJson) {
-          try {
-            const data = JSON.parse(guestJson) as UserData;
-            const fresh = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
-            setActivePathId(data.activePathId || fresh.activePathId);
-            setLearningPath(data.learningPath || fresh.learningPath);
-            setCustomLearningPaths(data.customLearningPaths || fresh.customLearningPaths);
-            setActiveLessonId(data.activeLessonId || null);
-            setLearningPathHistories(data.learningPathHistories || {});
-            setCustomProjects(data.customProjects || []);
-            setActiveCustomProjectId(data.activeCustomProjectId || null);
-            setPoints(data.points || 0);
-            setAchievements(data.achievements?.length ? data.achievements : getInitialAchievements(data.learningPath?.title || 'Learning Path'));
-            setNotes(data.notes || {});
-            setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
-            setCustomDocs(data.customDocs || fresh.customDocs);
-            setAiLanguage(data.aiLanguage || fresh.aiLanguage);
-            setTheme((data.theme as Theme) || fresh.theme);
-            setProjectFiles(data.projectFiles || fresh.projectFiles);
-            setOpenFileIds(data.openFileIds || fresh.openFileIds);
-            setActiveFileId(data.activeFileId || fresh.activeFileId);
-          } catch (e) {
-            console.error('Failed to parse guest data', e);
-            resetStateForGuest();
-          }
+        
+        const userData = await loadUserData(null);
+        if (userData) {
+          const fresh = getInitialState((userData.activePathId as LearningPathId) || 'js-basics');
+          setActivePathId(userData.activePathId || fresh.activePathId);
+          setLearningPath(userData.learningPath || fresh.learningPath);
+          setCustomLearningPaths(safeArray(userData.customLearningPaths));
+          setActiveLessonId(userData.activeLessonId || null);
+          setLearningPathHistories(userData.learningPathHistories || {});
+          setCustomProjects(safeArray(userData.customProjects));
+          setActiveCustomProjectId(userData.activeCustomProjectId || null);
+          setPoints(userData.points || 0);
+          setAchievements(safeArray(userData.achievements).length ? userData.achievements : getInitialAchievements(userData.learningPath?.title || 'Learning Path'));
+          setNotes(userData.notes || {});
+          setBookmarkedLessonIds(safeArray(userData.bookmarkedLessonIds));
+          setCustomDocs(safeArray(userData.customDocs).length ? userData.customDocs : fresh.customDocs);
+          setAiLanguage(userData.aiLanguage || fresh.aiLanguage);
+          setTheme((userData.theme as Theme) || fresh.theme);
+          setProjectFiles(safeArray(userData.projectFiles).length ? userData.projectFiles : fresh.projectFiles);
+          setOpenFileIds(safeArray(userData.openFileIds).length ? userData.openFileIds : fresh.openFileIds);
+          setActiveFileId(userData.activeFileId || fresh.activeFileId);
         } else {
           resetStateForGuest();
         }
@@ -303,11 +313,12 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [resetStateForGuest]);
 
+  // Enhanced auto-save with new storage service
   useEffect(() => {
     if (authLoading) return;
     if (user && !hasLoadedData.current) return;
 
-    const current: Omit<UserData, 'lastSaved'> = {
+    const currentState: Omit<UserData, 'lastSaved'> = {
       activePathId,
       learningPath,
       activeLessonId,
@@ -327,24 +338,12 @@ const App: React.FC = () => {
       customLearningPaths,
     };
 
-    const save = () => {
-      if (user) {
-        try {
-          const toSave = { ...current, lastSaved: serverTimestamp() };
-          setDoc(doc(db, 'users', user.uid), toSave, { merge: true });
-        } catch (e) {
-          console.error('Error saving user data:', e);
-        }
-      } else {
-        try {
-          localStorage.setItem(GUEST_DATA_KEY, JSON.stringify(current));
-        } catch (e) {
-          console.error('Error saving guest data:', e);
-        }
-      }
-    };
-
-    const timer = setTimeout(save, 1500);
+    const timer = setTimeout(() => {
+      saveUserData(user, currentState).catch(error => {
+        console.error('Auto-save failed:', error);
+      });
+    }, 1500);
+    
     return () => clearTimeout(timer);
   }, [user, authLoading, activePathId, learningPath, activeLessonId, learningPathHistories, customProjects, activeCustomProjectId, points, achievements, notes, bookmarkedLessonIds, customDocs, aiLanguage, theme, projectFiles, openFileIds, activeFileId, customLearningPaths]);
 
@@ -360,9 +359,9 @@ const App: React.FC = () => {
     if (!ai) return null;
     const languageMap: Record<string, string> = { en: 'English', vi: 'Vietnamese' };
     const responseLanguage = languageMap[aiLanguage] || 'English';
-    const sanitizedHistory = history.map(({ role, parts }) => ({ role, parts: parts.map(p => ({ text: p.text })) }));
+    const sanitizedHistory = safeArray(history).map(({ role, parts }) => ({ role, parts: safeArray(parts).map(p => ({ text: safeString(p.text) })) }));
     let systemInstruction = `You are an expert AI programming mentor. Explain clearly, provide steps, analyze code, and give feedback. Use markdown code blocks. IMPORTANT: You MUST respond in ${responseLanguage}.`;
-    if (currentCustomDocs?.length) {
+    if (safeArray(currentCustomDocs).length) {
       systemInstruction += `\n\nPrefer these docs when relevant:\n${currentCustomDocs.map(d => `- ${d}`).join('\n')}`;
     }
     return ai.chats.create({ model: 'gemini-2.5-flash', history: sanitizedHistory, config: { systemInstruction, tools: [{ googleSearch: {} }] } });
@@ -373,7 +372,7 @@ const App: React.FC = () => {
     if (chatSessionRef.current && chatSessionRef.current.contextId === contextId) return chatSessionRef.current.session;
     let history: ChatMessage[] = [];
     if (activeView === 'learningPath') history = learningPathHistories[contextId] || [];
-    else if (activeView === 'customProject') history = (customProjects.find(p => p.id === contextId)?.chatHistory) || [];
+    else if (activeView === 'customProject') history = (safeArray(customProjects).find(p => p.id === contextId)?.chatHistory) || [];
     const session = createChatInstance(history, customDocs);
     if (session) chatSessionRef.current = { contextId, session };
     return session;
@@ -382,7 +381,7 @@ const App: React.FC = () => {
   const showNotification = (a: Achievement) => { setNotification(a); setTimeout(() => setNotification(null), 5000); };
   const unlockAchievement = useCallback((id: string) => {
     setAchievements(prev => {
-      const target = prev.find(a => a.id === id);
+      const target = safeArray(prev).find(a => a.id === id);
       if (target && !target.unlocked) { showNotification(target); return prev.map(a => a.id === id ? { ...a, unlocked: true } : a); }
       return prev;
     });
@@ -395,14 +394,14 @@ const App: React.FC = () => {
 
   const handleSetPriority = useCallback((itemId: string, priority: Priority) => {
     setLearningPath(current => {
-      const copy = clone(current);
-      for (const m of copy.modules) {
-        if (m.lessons) {
+      const copy = deepClone(current);
+      for (const m of safeArray(copy.modules)) {
+        if (safeArray(m.lessons).length) {
           const l = m.lessons.find((x: Lesson) => x.id === itemId);
           if (l) { l.priority = priority; return copy; }
         }
-        if (m.project?.steps) {
-          const s = m.project.steps.find((x: ProjectStep) => x.id === itemId);
+        if (safeArray(m.project?.steps).length) {
+          const s = m.project!.steps.find((x: ProjectStep) => x.id === itemId);
           if (s) { s.priority = priority; return copy; }
         }
       }
@@ -417,13 +416,13 @@ const App: React.FC = () => {
     if (activeFileId === fileId) setActiveFileId(next.length ? next[Math.max(0, idx - 1)] : null);
   }, [openFileIds, activeFileId]);
   const handleUpdateFileContent = useCallback((fileId: string, newContent: string) => {
-    const upd = (nodes: FileSystemNode[]): FileSystemNode[] => nodes.map(n => n.type === 'file' && n.id === fileId ? { ...n, content: newContent } : (n.type === 'folder' ? { ...n, children: upd(n.children) } : n));
+    const upd = (nodes: FileSystemNode[]): FileSystemNode[] => safeArray(nodes).map(n => n.type === 'file' && n.id === fileId ? { ...n, content: newContent } : (n.type === 'folder' ? { ...n, children: upd(n.children) } : n));
     setProjectFiles(prev => upd(prev));
   }, []);
 
   const addNodeToParent = (nodes: FileSystemNode[], parentId: string | null, newNode: FileSystemNode): FileSystemNode[] => {
-    if (parentId === null) return [...nodes, newNode];
-    return nodes.map(n => n.type === 'folder' ? (n.id === parentId ? { ...n, children: [...n.children, newNode], isOpen: true } : { ...n, children: addNodeToParent(n.children, parentId, newNode) }) : n);
+    if (parentId === null) return [...safeArray(nodes), newNode];
+    return safeArray(nodes).map(n => n.type === 'folder' ? (n.id === parentId ? { ...n, children: [...safeArray(n.children), newNode], isOpen: true } : { ...n, children: addNodeToParent(n.children, parentId, newNode) }) : n);
   };
   const handleCreateFile = useCallback((parentId: string | null) => {
     const name = getUniqueName(projectFiles, 'untitled.txt', false, parentId);
@@ -436,18 +435,18 @@ const App: React.FC = () => {
     const newFolder: ProjectFolder = { id: `folder-${Date.now()}`, name, type: 'folder', children: [], isOpen: true, parentId };
     setProjectFiles(prev => addNodeToParent(prev, parentId, newFolder));
   }, [projectFiles]);
-  const renameNodeRecursive = (nodes: FileSystemNode[], id: string, name: string): FileSystemNode[] => nodes.map(n => n.id === id ? { ...n, name } : (n.type === 'folder' ? { ...n, children: renameNodeRecursive(n.children, id, name) } : n));
+  const renameNodeRecursive = (nodes: FileSystemNode[], id: string, name: string): FileSystemNode[] => safeArray(nodes).map(n => n.id === id ? { ...n, name } : (n.type === 'folder' ? { ...n, children: renameNodeRecursive(n.children, id, name) } : n));
   const handleRenameNode = useCallback((id: string, name: string) => setProjectFiles(prev => renameNodeRecursive(prev, id, name)), []);
   const handleDeleteNode = useCallback((id: string) => { const r = findNodeAndParent(projectFiles, id); if (r) setNodeToDelete(r.node); }, [projectFiles]);
   const handleConfirmDeleteNode = useCallback(() => {
     if (!nodeToDelete) return;
     const del = (nodes: FileSystemNode[], id: string): { newNodes: FileSystemNode[], deletedFileIds: string[] } => {
       let deleted: string[] = [];
-      const kept = nodes.filter(n => { if (n.id === id) { const collect = (x: FileSystemNode) => x.type === 'file' ? deleted.push(x.id) : x.children.forEach(collect); collect(n); return false; } return true; })
+      const kept = safeArray(nodes).filter(n => { if (n.id === id) { const collect = (x: FileSystemNode) => x.type === 'file' ? deleted.push(x.id) : safeArray(x.children).forEach(collect); collect(n); return false; } return true; })
         .map(n => n.type === 'folder' ? (() => { const res = del(n.children, id); n.children = res.newNodes; deleted = deleted.concat(res.deletedFileIds); return n; })() : n);
       return { newNodes: kept, deletedFileIds: deleted };
     };
-    const { newNodes, deletedFileIds } = del(clone(projectFiles), nodeToDelete.id);
+    const { newNodes, deletedFileIds } = del(deepClone(projectFiles), nodeToDelete.id);
     setProjectFiles(newNodes);
     const nextOpen = openFileIds.filter(id => !deletedFileIds.includes(id)); setOpenFileIds(nextOpen);
     if (activeFileId && deletedFileIds.includes(activeFileId)) setActiveFileId(nextOpen.length ? nextOpen[0] : null);
@@ -462,26 +461,26 @@ const App: React.FC = () => {
         let cur: string | null = targetFolderId; while (cur) { if (cur === dragged.id) { console.error('Invalid move'); return current; } const p = findNodeAndParent(current, cur); cur = p?.node.parentId ?? null; }
       }
       let nodeToMove: FileSystemNode | null = null;
-      const remove = (nodes: FileSystemNode[], id: string): FileSystemNode[] => nodes.filter(n => { if (n.id === id) { nodeToMove = clone(n); return false; } if (n.type === 'folder') n.children = remove(n.children, id); return true; });
-      let tree = remove(clone(current), draggedId);
+      const remove = (nodes: FileSystemNode[], id: string): FileSystemNode[] => safeArray(nodes).filter(n => { if (n.id === id) { nodeToMove = deepClone(n); return false; } if (n.type === 'folder') n.children = remove(n.children, id); return true; });
+      let tree = remove(deepClone(current), draggedId);
       if (!nodeToMove) return current;
       nodeToMove.parentId = targetFolderId;
       nodeToMove.name = getUniqueName(tree, nodeToMove.name, nodeToMove.type === 'folder', targetFolderId);
-      const add = (nodes: FileSystemNode[], parentId: string | null, newNode: FileSystemNode): FileSystemNode[] => parentId === null ? [...nodes, newNode] : nodes.map(n => n.type === 'folder' ? (n.id === parentId ? { ...n, children: [...n.children, newNode], isOpen: true } : { ...n, children: add(n.children, parentId, newNode) }) : n);
+      const add = (nodes: FileSystemNode[], parentId: string | null, newNode: FileSystemNode): FileSystemNode[] => parentId === null ? [...safeArray(nodes), newNode] : safeArray(nodes).map(n => n.type === 'folder' ? (n.id === parentId ? { ...n, children: [...safeArray(n.children), newNode], isOpen: true } : { ...n, children: add(n.children, parentId, newNode) }) : n);
       tree = add(tree, targetFolderId, nodeToMove);
       return tree;
     });
   }, []);
 
-  const serializeProject = (nodes: FileSystemNode[], indent = ''): string => nodes.map(n => n.type === 'file' ? `${indent}# File: ${n.name}\n${indent}\`\`\`\n${n.content}\n${indent}\`\`\`\n` : `${indent}# Folder: ${n.name}\n${serializeProject(n.children, indent + '  ')}`).join('\n');
+  const serializeProject = (nodes: FileSystemNode[], indent = ''): string => safeArray(nodes).map(n => n.type === 'file' ? `${indent}# File: ${n.name}\n${indent}\`\`\`\n${n.content}\n${indent}\`\`\`\n` : `${indent}# Folder: ${n.name}\n${serializeProject(n.children, indent + '  ')}`).join('\n');
 
   const handleRunProject = useCallback(async () => {
     if (!ai) { setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'Gemini AI not initialized. Check API Key.' } })); return; }
     setIsProjectRunning(true); setProjectOutput(prev => ({ ...prev, run: t('playground.executing') }));
-    const prompt = `You are a web project simulator...\n\nProject Files:\n${serializeProject(projectFiles)}`;
+    const prompt = `You are a web project simulator. Your task is to analyze the provided HTML, CSS, and JavaScript files and generate a single JSON object representing the final output.\n\n**JSON Output Rules:**\n1. Your entire response MUST be a single, valid JSON object. Do not include any text, markdown, or code fences outside of the JSON structure.\n2. If the project is a standard web page (has an \`index.html\`):\n   - \`type\`: "web"\n   - \`windowTitle\`: A string extracted from the \`<title>\` tag in the HTML. Default to "Untitled" if not found.\n   - \`browserContent\`: A string representing ONLY THE VISIBLE TEXT content that would be rendered on the page. Preserve line breaks and basic formatting. Do NOT include HTML tags.\n   - \`consoleLogs\`: An array of strings, where each string is a message logged to the console. If no logs, provide an empty array \`[]\`.\n3. If the project is just a script (e.g., only a .js file) and not a web page:\n   - \`type\`: "script"\n   - \`consoleLogs\`: An array of strings for the console output.\n4. If there is a clear error in the code:\n   - \`type\`: "error"\n   - \`error\`: A string describing the error.\n\n**Example for a web project:**\n\`\`\`json\n{\n  "type": "web",\n  "windowTitle": "My App",\n  "browserContent": "Hello, World!\\nThis is a paragraph.",\n  "consoleLogs": ["Script loaded.", "Button was clicked!"]\n}\n\`\`\`\n\nNow, analyze the following project files and provide only the JSON output.\n\nProject Files:\n${serializeProject(projectFiles)}`;
     try {
       const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-      let raw = resp.text.trim();
+      let raw = safeString(resp.text).trim();
       if (raw.startsWith('```json')) raw = raw.substring(7, raw.length - 3).trim(); else if (raw.startsWith('```')) raw = raw.substring(3, raw.length - 3).trim();
       try { setProjectOutput(prev => ({ ...prev, run: JSON.parse(raw) })); } catch { setProjectOutput(prev => ({ ...prev, run: { type: 'raw', rawText: raw || 'The AI returned an invalid format.' } })); }
     } catch (e) {
@@ -492,7 +491,7 @@ const App: React.FC = () => {
   const handleAnalyzeCode = useCallback(async (code: string, language: string) => {
     if (!ai) { setProjectOutput(prev => ({ ...prev, analysis: 'Gemini AI not initialized. Check API Key.' })); return; }
     setIsAnalyzing(true); setProjectOutput(prev => ({ ...prev, analysis: t('codeEditor.analyzing') }));
-    const prompt = `You are a code analysis tool...\n\n\`\`\`${language}\n${code}\n\`\`\``;
+    const prompt = `You are a code analysis tool. Analyze the following ${language} code for syntax errors, logical bugs, and style improvements. Provide a clear, concise report formatted in Markdown. If no issues are found, respond with "No issues found."\n\n\`\`\`${language}\n${code}\n\`\`\``;
     try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); setProjectOutput(prev => ({ ...prev, analysis: resp.text })); }
     catch { setProjectOutput(prev => ({ ...prev, analysis: 'An unexpected error occurred while analyzing the code.' })); }
     finally { setIsAnalyzing(false); }
@@ -501,7 +500,7 @@ const App: React.FC = () => {
   const handleExplainCode = useCallback(async (selected: string, ctx: string, language: string) => {
     if (!ai) { setProjectOutput(prev => ({ ...prev, explanation: 'Gemini AI not initialized. Check API Key.' })); return; }
     setIsAnalyzing(true); setProjectOutput(prev => ({ ...prev, explanation: t('codeEditor.analyzing') }));
-    const prompt = `Explain the following code...\n\n**Code Snippet:**\n\`\`\`${language}\n${selected}\n\`\`\`\n\n**File Context:**\n\`\`\`${language}\n${ctx}\n\`\`\``;
+    const prompt = `Explain the following code clearly and concisely for a beginner.\n\n**Code Snippet:**\n\`\`\`${language}\n${selected}\n\`\`\`\n\n**File Context:**\n\`\`\`${language}\n${ctx}\n\`\`\`\n\nProvide your explanation in Markdown format.`;
     try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); setProjectOutput(prev => ({ ...prev, explanation: resp.text })); }
     catch { setProjectOutput(prev => ({ ...prev, explanation: 'An unexpected error occurred while explaining the code.' })); }
     finally { setIsAnalyzing(false); }
@@ -510,15 +509,15 @@ const App: React.FC = () => {
   const handleSuggestCompletion = useCallback(async (code: string, fileId: string) => {
     if (!ai || !fileId) return; setIsSuggesting(true);
     const prompt = `Complete this code. Only output the completed code.\n\n${code}`;
-    try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); handleUpdateFileContent(fileId, resp.text); }
+    try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); handleUpdateFileContent(fileId, safeString(resp.text)); }
     catch { setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'An unexpected error occurred while suggesting code.' } })); }
     finally { setIsSuggesting(false); }
   }, [ai, handleUpdateFileContent]);
 
   const handleFormatCode = useCallback(async (fileId: string, code: string, language: string) => {
     if (!ai || !fileId) return; setIsFormatting(true);
-    const prompt = `Format the following ${language} code. Output only formatted code.\n\n\`\`\`${language}\n${code}\n\`\`\``;
-    try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); handleUpdateFileContent(fileId, resp.text); }
+    const prompt = `Format the following ${language} code according to standard conventions. Only provide the formatted code in your response. Do not add any explanation, comments, or markdown formatting like \`\`\`. Your response must be only the raw, formatted code.\n\nCode to format:\n\`\`\`${language}\n${code}\n\`\`\``;
+    try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); handleUpdateFileContent(fileId, safeString(resp.text)); }
     catch { setProjectOutput(prev => ({ ...prev, run: { type: 'error', error: 'An unexpected error occurred while formatting code.' } })); }
     finally { setIsFormatting(false); }
   }, [ai, handleUpdateFileContent]);
@@ -532,8 +531,8 @@ const App: React.FC = () => {
     const chat = getChatSession(idContext); if (!chat) { setChatError(t('chat.sendError')); return; }
 
     const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
-    const baseHistory = initialHistory ?? (messagesRef.current || []);
-    if (!isSystemMessage) setChatHistory(prev => ({ ...prev, [idContext]: { past: [...(prev[idContext]?.past || []), baseHistory], future: [] } }));
+    const baseHistory = safeArray(initialHistory ?? (messagesRef.current || []));
+    if (!isSystemMessage) setChatHistory(prev => ({ ...prev, [idContext]: { past: [...((prev[idContext]?.past) || []), baseHistory], future: [] } }));
 
     const initialUI = isSystemMessage ? baseHistory : [...baseHistory, userMessage];
     setMessages(initialUI); setIsLoading(true);
@@ -544,9 +543,9 @@ const App: React.FC = () => {
       const modelMsg: ChatMessage = { role: 'model', parts: [{ text: '' }] };
       setMessages([...initialUI, modelMsg]);
       for await (const ck of stream) {
-        text += ck.text;
+        text += safeString(ck.text);
         if (ck.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-          chunks = ck.candidates[0].groundingMetadata.groundingChunks.map(c => ({ web: { uri: c.web?.uri, title: c.web?.title } })).filter(c => c.web && c.web.uri);
+          chunks = safeArray(ck.candidates[0].groundingMetadata.groundingChunks).map(c => ({ web: { uri: c.web?.uri, title: c.web?.title } })).filter(c => c.web && c.web.uri);
         }
         setMessages(prev => { const next = [...prev]; const last = next[next.length - 1]; if (last?.role === 'model') next[next.length - 1] = { ...last, parts: [{ text }], groundingChunks: chunks.length ? chunks : undefined }; return next; });
       }
@@ -554,10 +553,10 @@ const App: React.FC = () => {
       console.error('sendMessage error', e); setChatError(t('chat.sendError')); setMessages(initialUI);
     } finally {
       setIsLoading(false);
-      const final = messagesRef.current || [];
-      const cleaned = final.map(m => { const c: ChatMessage = { role: m.role, parts: m.parts.map(p => ({ text: p.text })) }; if (m.groundingChunks) { const clean = m.groundingChunks.map(gc => ({ web: { uri: gc.web?.uri, title: gc.web?.title } })).filter(gc => gc.web && gc.web.uri); if (clean.length) c.groundingChunks = clean; } return c; });
+      const final = safeArray(messagesRef.current);
+      const cleaned = final.map(m => { const c: ChatMessage = { role: m.role, parts: safeArray(m.parts).map(p => ({ text: safeString(p.text) })) }; if (m.groundingChunks) { const clean = safeArray(m.groundingChunks).map(gc => ({ web: { uri: gc.web?.uri, title: gc.web?.title } })).filter(gc => gc.web && gc.web.uri); if (clean.length) c.groundingChunks = clean; } return c; });
       if (viewContext === 'learningPath') setLearningPathHistories(prev => ({ ...prev, [idContext]: cleaned }));
-      else setCustomProjects(prev => prev.map(p => p.id === idContext ? { ...p, chatHistory: cleaned } : p));
+      else setCustomProjects(prev => safeArray(prev).map(p => p.id === idContext ? { ...p, chatHistory: cleaned } : p));
     }
   }, [activeView, activeCustomProjectId, activeLessonId, t, getChatSession]);
 
@@ -568,104 +567,37 @@ const App: React.FC = () => {
     const history = learningPathHistories[item.id] || [];
     if (!history.length) handleSendMessage(item.prompt, { isSystemMessage: true, initialHistory: [], targetId: item.id, targetView: 'learningPath' });
     setLearningPath(current => {
-      const copy = { ...current, modules: current.modules.map(m => {
-        if (m.lessons?.find(l => l.id === item.id)) {
-          const already = m.lessons.find(l => l.id === item.id)!.completed;
-          const mm = { ...m, lessons: m.lessons.map(l => l.id === item.id ? { ...l, completed: true } : l) };
+      const copy = { ...current, modules: safeArray(current.modules).map(m => {
+        if (safeArray(m.lessons).find(l => l.id === item.id)) {
+          const already = m.lessons!.find(l => l.id === item.id)!.completed;
+          const mm = { ...m, lessons: m.lessons!.map(l => l.id === item.id ? { ...l, completed: true } : l) };
           if (!already) { setPoints(p => p + 10); unlockAchievement('first-lesson'); }
           return mm;
-        } else if (m.project?.steps.find(s => s.id === item.id)) {
-          const already = m.project.steps.find(s => s.id === item.id)!.completed;
-          const mm = { ...m, project: { ...m.project, steps: m.project.steps.map(s => s.id === item.id ? { ...s, completed: true } : s) } };
+        } else if (safeArray(m.project?.steps).find(s => s.id === item.id)) {
+          const already = m.project!.steps.find(s => s.id === item.id)!.completed;
+          const mm = { ...m, project: { ...m.project!, steps: m.project!.steps.map(s => s.id === item.id ? { ...s, completed: true } : s) } };
           if (!already) { setPoints(p => p + 10); unlockAchievement('first-lesson'); }
           return mm;
         }
         return m;
       }) } as LearningPath;
-      const updatedModule = copy.modules.find(m => m.lessons?.some(l => l.id === item.id) || m.project?.steps.some(s => s.id === item.id));
+      const updatedModule = safeArray(copy.modules).find(m => safeArray(m.lessons).some(l => l.id === item.id) || safeArray(m.project?.steps).some(s => s.id === item.id));
       if (updatedModule) {
-        if (updatedModule.lessons?.every(l => l.completed)) unlockAchievement('first-module');
-        if (updatedModule.project?.steps.every(s => s.completed)) unlockAchievement('project-builder');
+        if (safeArray(updatedModule.lessons).every(l => l.completed)) unlockAchievement('first-module');
+        if (safeArray(updatedModule.project?.steps).every(s => s.completed)) unlockAchievement('project-builder');
       }
-      const allItems = copy.modules.flatMap(m => m.lessons || m.project?.steps || []);
+      const allItems = getAllPathItems(copy);
       if (allItems.every(i => i.completed)) unlockAchievement('path-complete');
       return copy;
     });
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, [handleSendMessage, unlockAchievement, learningPathHistories]);
 
-  // FIXED: handleSelectPath supports both standard and custom paths for guest & logged-in users
-  const handleSelectPath = useCallback((pathId: string) => {
-    const standardPath = learningPaths[pathId as LearningPathId];
-    const customPath = customLearningPaths.find(p => p.id === pathId);
-    const pathData = customPath || standardPath;
-    if (!pathData) { console.error(`Path with id "${pathId}" not found.`); return; }
-    const newPathData = clone(pathData);
-
-    if (user) {
-      if (!customPath) {
-        // Logged-in + standard path: reset progress for this path
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setAchievements(getInitialAchievements(newPathData.title));
-        setPoints(0);
-        setActiveLessonId(null);
-        setLearningPathHistories({});
-        setNotes({});
-        setBookmarkedLessonIds([]);
-        setActiveView('learningPath');
-        setMessages([]);
-        setChatHistory({});
-      } else {
-        // Logged-in + custom path: switch WITHOUT reset
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setActiveLessonId(null);
-        setActiveView('learningPath');
-        setMessages([]);
-      }
-    } else {
-      // Guest user: allow both standard and custom
-      if (standardPath) {
-        resetStateForGuest(pathId as LearningPathId);
-      } else {
-        // Guest + custom path from localStorage
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setActiveLessonId(null);
-        setActiveView('learningPath');
-        setMessages([]);
-      }
-    }
-  }, [user, resetStateForGuest, customLearningPaths]);
-
-  // FIXED: create custom path without race conditions
-  const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
-    const newPath: LearningPath = { ...pathData, id: `custom-${Date.now()}` };
-    setCustomLearningPaths(prev => {
-      const next = [...prev, newPath];
-      // Switch to new path immediately using the newly created object (no lookup)
-      setActivePathId(newPath.id);
-      setLearningPath(newPath);
-      setAchievements(getInitialAchievements(newPath.title));
-      setPoints(0);
-      setActiveLessonId(null);
-      setLearningPathHistories({});
-      setNotes({});
-      setBookmarkedLessonIds([]);
-      setActiveView('learningPath');
-      setMessages([]);
-      setChatHistory({});
-      return next;
-    });
-    setIsCreatePathModalOpen(false);
-  }, []);
-
   const handleCreateProjectFromScaffold = useCallback((name: string, goal: string, files: FileSystemNode[]) => {
     const newProject: CustomProject = { id: `proj-${Date.now()}`, name, goal, chatHistory: [] };
-    setCustomProjects(prev => [...prev, newProject]);
-    setProjectFiles(files);
-    const firstFile = files.find(f => f.type === 'file') as ProjectFile | undefined;
+    setCustomProjects(prev => [...safeArray(prev), newProject]);
+    setProjectFiles(safeArray(files));
+    const firstFile = safeArray(files).find(f => f.type === 'file') as ProjectFile | undefined;
     setOpenFileIds(firstFile ? [firstFile.id] : []);
     setActiveFileId(firstFile ? firstFile.id : null);
     setActiveCustomProjectId(newProject.id);
@@ -678,7 +610,7 @@ const App: React.FC = () => {
 
   const handleDeleteCustomProject = useCallback(() => {
     if (!projectToDelete) return;
-    setCustomProjects(prev => prev.filter(p => p.id !== projectToDelete.id));
+    setCustomProjects(prev => safeArray(prev).filter(p => p.id !== projectToDelete.id));
     if (activeCustomProjectId === projectToDelete.id) { setActiveCustomProjectId(null); setMessages([]); setActiveView('learningPath'); }
     setProjectToDelete(null);
   }, [projectToDelete, activeCustomProjectId]);
@@ -691,11 +623,11 @@ const App: React.FC = () => {
     setChatHistory(prev => { const n = { ...prev }; delete n[id]; return n; });
     if (view === 'learningPath') {
       setLearningPathHistories(prev => { const n = { ...prev }; delete n[id]; return n; });
-      const item = learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === id);
+      const item = getAllPathItems(learningPath).find(l => l.id === id);
       if (item) { setMessages([]); handleSendMessage(item.prompt, { isSystemMessage: true, initialHistory: [], targetId: item.id, targetView: 'learningPath' }); }
     } else {
-      const proj = customProjects.find(p => p.id === id); if (proj) {
-        setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, chatHistory: [] } : p));
+      const proj = safeArray(customProjects).find(p => p.id === id); if (proj) {
+        setCustomProjects(prev => safeArray(prev).map(p => p.id === id ? { ...p, chatHistory: [] } : p));
         const kickstart = `Start a new custom project with me. My project is called: "${proj.name}". My main goal is: "${proj.goal}". Ask my current knowledge, suggest a stack, and the first step.`;
         setMessages([]); handleSendMessage(kickstart, { isSystemMessage: true, initialHistory: [], targetId: proj.id, targetView: 'customProject' });
       }
@@ -705,36 +637,41 @@ const App: React.FC = () => {
 
   const handleUndo = useCallback(() => {
     const id = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId; if (!id) return;
-    const ctx = chatHistory[id]; if (!ctx?.past.length) return;
+    const ctx = chatHistory[id]; if (!safeArray(ctx?.past).length) return;
     const newPast = ctx.past.slice(0, -1); const stateToRestore = ctx.past[ctx.past.length - 1];
-    const currentState = messagesRef.current || []; const newFuture = [currentState, ...(ctx.future || [])];
+    const currentState = safeArray(messagesRef.current); const newFuture = [currentState, ...safeArray(ctx.future)];
     setMessages(stateToRestore);
-    if (activeView === 'learningPath') setLearningPathHistories(prev => ({ ...prev, [id]: stateToRestore })); else setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, chatHistory: stateToRestore } : p));
+    if (activeView === 'learningPath') setLearningPathHistories(prev => ({ ...prev, [id]: stateToRestore })); else setCustomProjects(prev => safeArray(prev).map(p => p.id === id ? { ...p, chatHistory: stateToRestore } : p));
     setChatHistory(prev => ({ ...prev, [id]: { past: newPast, future: newFuture } }));
   }, [activeView, activeLessonId, activeCustomProjectId, chatHistory]);
 
   const handleRedo = useCallback(() => {
     const id = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId; if (!id) return;
-    const ctx = chatHistory[id]; if (!ctx?.future.length) return;
+    const ctx = chatHistory[id]; if (!safeArray(ctx?.future).length) return;
     const stateToRestore = ctx.future[0]; const newFuture = ctx.future.slice(1);
-    const currentState = messagesRef.current || []; const newPast = [...(ctx.past || []), currentState];
+    const currentState = safeArray(messagesRef.current); const newPast = [...safeArray(ctx.past), currentState];
     setMessages(stateToRestore);
-    if (activeView === 'learningPath') setLearningPathHistories(prev => ({ ...prev, [id]: stateToRestore })); else setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, chatHistory: stateToRestore } : p));
+    if (activeView === 'learningPath') setLearningPathHistories(prev => ({ ...prev, [id]: stateToRestore })); else setCustomProjects(prev => safeArray(prev).map(p => p.id === id ? { ...p, chatHistory: stateToRestore } : p));
     setChatHistory(prev => ({ ...prev, [id]: { past: newPast, future: newFuture } }));
   }, [activeView, activeLessonId, activeCustomProjectId, chatHistory]);
 
   const activeLesson = useMemo(() => {
-    if (!activeLessonId || !learningPath?.modules) return null;
-    return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
+    if (!activeLessonId) return null;
+    return getAllPathItems(learningPath).find(l => l.id === activeLessonId) || null;
   }, [activeLessonId, learningPath]);
 
   const handleRequestChallenge = useCallback(async () => {
     if (!ai || !activeLesson) return; setIsChallengeLoading(true);
-    const prompt = `Based on the learning topic "${activeLesson.title}: ${activeLesson.prompt}", create a small, relevant coding challenge for a beginner.`;
+    const prompt = `Based on the learning topic "${safeString(activeLesson.title)}: ${safeString(activeLesson.prompt)}", create a small, relevant coding challenge for a beginner. The challenge should test the core concepts of the lesson. Format the response in Markdown. Include a clear problem description, an example if necessary, and a hint.`;
     try { const resp = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt }); setChallengeContent(resp.text); setIsChallengeModalOpen(true); }
     catch (e) { console.error('challenge error', e); }
     finally { setIsChallengeLoading(false); }
   }, [ai, activeLesson]);
+
+  // Close modal callback for create path
+  const handleCloseCreatePathModal = useCallback(() => {
+    setIsCreatePathModalOpen(false);
+  }, []);
 
   if (authLoading) {
     return (
@@ -759,8 +696,8 @@ const App: React.FC = () => {
   }
 
   const currentContextId = activeView === 'learningPath' ? activeLessonId : activeCustomProjectId;
-  const canUndo = !!(currentContextId && chatHistory[currentContextId]?.past.length > 0);
-  const canRedo = !!(currentContextId && chatHistory[currentContextId]?.future.length > 0);
+  const canUndo = !!(currentContextId && safeArray(chatHistory[currentContextId]?.past).length > 0);
+  const canRedo = !!(currentContextId && safeArray(chatHistory[currentContextId]?.future).length > 0);
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -775,7 +712,7 @@ const App: React.FC = () => {
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
           achievements={achievements}
-          allPaths={Object.values(learningPaths)}
+          allPaths={getStandardPaths()}
           activePathId={activePathId}
           onSelectPath={handleSelectPath}
           bookmarkedLessonIds={bookmarkedLessonIds}
@@ -869,7 +806,7 @@ const App: React.FC = () => {
                   <NotesPanel
                     note={activeLessonId ? notes[activeLessonId] || '' : ''}
                     onNoteChange={(n) => activeLessonId && handleNoteChange(activeLessonId, n)}
-                    activeLessonTitle={activeLesson?.title || null}
+                    activeLessonTitle={safeString(activeLesson?.title)}
                     disabled={activeView === 'customProject'}
                   />
                 )}
@@ -883,7 +820,7 @@ const App: React.FC = () => {
         <NewProjectModal onClose={() => setIsCreateModalOpen(false)} onScaffoldComplete={handleCreateProjectFromScaffold} ai={ai} aiLanguage={aiLanguage || 'en'} />
       )}
       {isCreatePathModalOpen && (
-        <CreatePathModal onClose={() => setIsCreatePathModalOpen(false)} onPathCreated={handleCreateCustomPath} ai={ai} aiLanguage={aiLanguage || 'en'} />
+        <CreatePathModal onClose={handleCloseCreatePathModal} onPathCreated={handleCreateCustomPath} ai={ai} aiLanguage={aiLanguage || 'en'} />
       )}
       {projectToDelete && (
         <ConfirmationModal title={t('deleteProjectModal.title')} message={t('deleteProjectModal.message', { projectName: projectToDelete.name })} onConfirm={handleDeleteCustomProject} onClose={() => setProjectToDelete(null)} confirmText={t('deleteProjectModal.confirm')} />
