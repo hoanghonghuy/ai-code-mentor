@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChatMessage, LearningPath, LearningModule } from '../types';
 import { GoogleGenAI, Chat, Type } from "@google/genai";
 import { SimpleMarkdown } from './MarkdownRenderer';
+import { repairLearningPath, validateLearningPath } from '../services/pathService';
 
 interface CreatePathModalProps {
   onClose: () => void;
@@ -67,18 +68,16 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
     -   Your final response must be ONLY a valid JSON object. No markdown, no "Here is the JSON", just the raw JSON.
     -   The JSON object must match the 'LearningPath' structure.
     -   It must have a 'title' (string) and 'modules' (array).
-    -   Each module must have a 'title'. A module can have 'lessons' OR a 'project', but not both.
-    -   Each lesson/project step MUST have: 'id' (string, e.g., "custom-1-1"), 'title' (string), 'prompt' (string, a good starting prompt for the AI mentor), 'completed' (boolean, always false), and 'priority' (string, always "none").
+    -   Each module must have a 'title'. A module can have 'lessons' OR a 'project'. If project exists but steps is missing, set steps to an empty array [].
+    -   Each lesson/project step MUST have: 'id' (string, e.g., "custom-1-1"), 'title' (string), 'prompt' (string), 'completed' (boolean, always false), and 'priority' (string, always "none").
     -   Generate between 3 to 6 modules for a concise but comprehensive path.
-    -   Include at least one guided project module.
+    -   Include at least one guided project module with 3-5 steps.
     
     You MUST respond in ${responseLanguage}.`;
 
     chatSessionRef.current = ai.chats.create({
       model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction
-      }
+      config: { systemInstruction }
     });
 
     const initialBotMessage: ChatMessage = {
@@ -93,9 +92,50 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
     initializeChat();
   }, [ai, aiLanguage, t]);
 
+  // Normalize + repair before passing to onPathCreated
+  const normalizeAndStart = (rawPath: Omit<LearningPath, 'id'>) => {
+    // 1) Nếu module có project nhưng thiếu steps, gán steps = []
+    const normalized: Omit<LearningPath, 'id'> = {
+      title: rawPath.title || 'Custom Learning Path',
+      description: rawPath.description || 'Custom learning path created by user',
+      modules: (rawPath.modules || []).map((m: any) => {
+        const hasLessons = Array.isArray(m.lessons);
+        const hasProject = !!m.project && typeof m.project === 'object';
+        const fixedProject = hasProject ? {
+          title: m.project.title || 'Guided Project',
+          description: m.project.description || '',
+          steps: Array.isArray(m.project.steps) ? m.project.steps : []
+        } : undefined;
+
+        // Nếu module vừa không có lessons vừa không có steps → seed 1 lesson starter
+        const finalLessons = hasLessons ? m.lessons : (!fixedProject || fixedProject.steps.length === 0) ? [
+          { id: `lesson-${Date.now()}-${Math.random()}`, title: 'Introduction', prompt: 'Start here.', completed: false, priority: 'none' }
+        ] : undefined;
+
+        // Nếu cả lessons và project đều tồn tại → ưu tiên lessons để tránh double content
+        return {
+          title: m.title || 'Untitled Module',
+          description: m.description || '',
+          lessons: finalLessons,
+          project: finalLessons ? undefined : fixedProject
+        } as LearningModule;
+      })
+    };
+
+    // 2) Sửa sâu bằng repairLearningPath
+    const repaired = repairLearningPath(normalized) || normalized as any;
+
+    // 3) Validate lần cuối (không chặn UI nếu fail; ta đã normalize rồi)
+    if (!validateLearningPath({ ...repaired, id: 'temp' })) {
+      console.warn('Normalized path still not strictly valid, proceeding with best-effort data.');
+    }
+
+    onPathCreated(repaired);
+  };
+
   const handleStartPath = () => {
       if (generatedPath) {
-          onPathCreated(generatedPath);
+          normalizeAndStart(generatedPath);
       }
   };
 
