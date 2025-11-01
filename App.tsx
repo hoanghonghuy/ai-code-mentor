@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile, Theme } from './types';
@@ -35,7 +34,14 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
     return definitions.map(ach => ({ ...ach, unlocked: false }));
 };
 
-const getInitialLearningPath = (pathId: LearningPathId): LearningPath => JSON.parse(JSON.stringify(learningPaths[pathId]));
+const getInitialLearningPath = (pathId: LearningPathId): LearningPath => {
+    if (!learningPaths[pathId]) {
+        // Fallback to js-basics if the pathId is not found in standard paths
+        console.warn(`Learning path with id "${pathId}" not found in standard paths, falling back to js-basics`);
+        return JSON.parse(JSON.stringify(learningPaths['js-basics']));
+    }
+    return JSON.parse(JSON.stringify(learningPaths[pathId]));
+};
 
 const defaultProjectFiles: FileSystemNode[] = [
     { id: 'file-1', name: 'index.html', type: 'file', content: `<!DOCTYPE html>
@@ -285,7 +291,7 @@ const App: React.FC = () => {
                 setCustomProjects(data.customProjects || []);
                 setActiveCustomProjectId(data.activeCustomProjectId || null);
                 setPoints(data.points || 0);
-                setAchievements(data.achievements || getInitialAchievements(data.learningPath.title));
+                setAchievements(data.achievements || getInitialAchievements(data.learningPath?.title || 'Learning Path'));
                 setNotes(data.notes || {});
                 setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
                 setCustomDocs(data.customDocs || freshState.customDocs);
@@ -314,7 +320,7 @@ const App: React.FC = () => {
                      setCustomProjects(data.customProjects || []);
                      setActiveCustomProjectId(data.activeCustomProjectId || null);
                      setPoints(data.points || 0);
-                     setAchievements(data.achievements?.length ? data.achievements : getInitialAchievements(data.learningPath.title));
+                     setAchievements(data.achievements?.length ? data.achievements : getInitialAchievements(data.learningPath?.title || 'Learning Path'));
                      setNotes(data.notes || {});
                      setBookmarkedLessonIds(data.bookmarkedLessonIds || []);
                      setCustomDocs(data.customDocs || freshState.customDocs);
@@ -1144,22 +1150,46 @@ ${projectStructure}`;
         setActiveLessonId(null);
         setActiveView('learningPath');
         setMessages([]);
-    } else { // Guest user
-        resetStateForGuest(pathId as LearningPathId);
+    } else { // Guest user - only allow standard paths
+        if (standardPath) {
+            resetStateForGuest(pathId as LearningPathId);
+        } else {
+            console.error(`Guest users cannot access custom path with id "${pathId}".`);
+            return;
+        }
     }
   }, [user, resetStateForGuest, customLearningPaths]);
 
+  // FIX: Completely redesigned handleCreateCustomPath to avoid dependency on stale state
   const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
     const newPath: LearningPath = {
       ...pathData,
       id: `custom-${Date.now()}`
     };
     
-    setCustomLearningPaths(prev => [...prev, newPath]);
-    handleSelectPath(newPath.id);
+    // Update all related states in one batch using function updates to avoid stale state
+    setCustomLearningPaths(prev => {
+        const newCustomPaths = [...prev, newPath];
+        
+        // Perform all state updates synchronously within this setter
+        // This ensures all updates happen with the latest state
+        setActivePathId(newPath.id);
+        setLearningPath(newPath);
+        setAchievements(getInitialAchievements(newPath.title));
+        setPoints(0);
+        setActiveLessonId(null);
+        setLearningPathHistories({});
+        setNotes({});
+        setBookmarkedLessonIds([]);
+        setActiveView('learningPath');
+        setMessages([]);
+        setChatHistory({});
+        
+        return newCustomPaths;
+    });
+    
     setIsCreatePathModalOpen(false);
-
-  }, [handleSelectPath]);
+  }, []);
 
   const handleCreateProjectFromScaffold = useCallback((name: string, goal: string, files: FileSystemNode[]) => {
     const newProject: CustomProject = {
@@ -1324,7 +1354,7 @@ ${projectStructure}`;
 
 
   const activeLesson = useMemo(() => {
-    if (!activeLessonId) return null;
+    if (!activeLessonId || !learningPath?.modules) return null;
     return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
   }, [activeLessonId, learningPath]);
 
