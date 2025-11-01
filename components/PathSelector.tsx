@@ -26,10 +26,14 @@ const PathSelector: React.FC<PathSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
+  // FIXED: Safe array handling to prevent undefined errors
+  const safeAllPaths = Array.isArray(allPaths) ? allPaths : [];
+  const safeCustomPaths = Array.isArray(customLearningPaths) ? customLearningPaths : [];
+  
   // Find current path
-  const currentPath = [...allPaths, ...customLearningPaths].find(p => p.id === activePathId);
-  const isCurrentPathCustom = customLearningPaths.some(p => p.id === activePathId);
-  const currentCustomPath = customLearningPaths.find(p => p.id === activePathId);
+  const currentPath = [...safeAllPaths, ...safeCustomPaths].find(p => p.id === activePathId);
+  const isCurrentPathCustom = safeCustomPaths.some(p => p.id === activePathId);
+  const currentCustomPath = safeCustomPaths.find(p => p.id === activePathId);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -57,6 +61,11 @@ const PathSelector: React.FC<PathSelectorProps> = ({
     e.stopPropagation();
     onDeletePath(path);
     setIsOpen(false);
+  };
+
+  // FIXED: Safe module count calculation
+  const getModuleCount = (path: LearningPath): number => {
+    return Array.isArray(path.modules) ? path.modules.length : 0;
   };
 
   return (
@@ -112,7 +121,7 @@ const PathSelector: React.FC<PathSelectorProps> = ({
                 {t('sidebar.standardPaths')}
               </div>
               <div className="space-y-1">
-                {allPaths.map(path => (
+                {safeAllPaths.map(path => (
                   <button
                     key={path.id}
                     onClick={() => handleSelectPath(path.id)}
@@ -126,7 +135,8 @@ const PathSelector: React.FC<PathSelectorProps> = ({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{path.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {t('sidebar.modulesCount', { count: path.modules.length })}
+                        {/* FIXED: Safe module count */}
+                        {t('sidebar.modulesCount', { count: getModuleCount(path) })}
                       </p>
                     </div>
                     {activePathId === path.id && (
@@ -138,13 +148,13 @@ const PathSelector: React.FC<PathSelectorProps> = ({
             </div>
 
             {/* Custom Paths Section */}
-            {customLearningPaths.length > 0 && (
+            {safeCustomPaths.length > 0 && (
               <div className="px-2 pb-2">
                 <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   {t('sidebar.yourPaths')}
                 </div>
                 <div className="space-y-1">
-                  {customLearningPaths.map(path => (
+                  {safeCustomPaths.map(path => (
                     <div
                       key={path.id}
                       className={`group flex items-center rounded-md ${
@@ -167,7 +177,8 @@ const PathSelector: React.FC<PathSelectorProps> = ({
                             {path.title}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {t('sidebar.modulesCount', { count: path.modules.length })} • {t('sidebar.customLabel')}
+                            {/* FIXED: Safe module count for custom paths */}
+                            {t('sidebar.modulesCount', { count: getModuleCount(path) })} • {t('sidebar.customLabel')}
                           </p>
                         </div>
                         {activePathId === path.id && (
