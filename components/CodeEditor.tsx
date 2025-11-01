@@ -402,11 +402,15 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const [isRootDragOver, setIsRootDragOver] = useState(false);
 
     const [sidebarWidth, setSidebarWidth] = useState(224); // Corresponds to w-56
-    const isResizing = useRef(false);
+    const isSidebarResizing = useRef(false);
     const editorContainerRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        if (!isResizing.current || !editorContainerRef.current) return;
+    const [outputHeight, setOutputHeight] = useState(192); // 12rem
+    const isOutputResizing = useRef(false);
+    const editorAndOutputContainerRef = useRef<HTMLDivElement>(null);
+
+    const handleSidebarMouseMove = useCallback((e: MouseEvent) => {
+        if (!isSidebarResizing.current || !editorContainerRef.current) return;
         const startX = editorContainerRef.current.getBoundingClientRect().left;
         const newWidth = e.clientX - startX;
         // Add constraints for min/max width
@@ -415,22 +419,52 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         }
     }, []);
 
-    const handleMouseUp = useCallback(() => {
-        isResizing.current = false;
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+    const handleSidebarMouseUp = useCallback(() => {
+        isSidebarResizing.current = false;
+        window.removeEventListener('mousemove', handleSidebarMouseMove);
+        window.removeEventListener('mouseup', handleSidebarMouseUp);
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
-    }, [handleMouseMove]);
+    }, [handleSidebarMouseMove]);
 
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const handleSidebarMouseDown = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
-        isResizing.current = true;
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        isSidebarResizing.current = true;
+        window.addEventListener('mousemove', handleSidebarMouseMove);
+        window.addEventListener('mouseup', handleSidebarMouseUp);
         document.body.style.userSelect = 'none';
         document.body.style.cursor = 'col-resize';
-    }, [handleMouseMove, handleMouseUp]);
+    }, [handleSidebarMouseMove, handleSidebarMouseUp]);
+
+     const handleOutputMouseMove = useCallback((e: MouseEvent) => {
+        if (!isOutputResizing.current || !editorAndOutputContainerRef.current) return;
+        const containerRect = editorAndOutputContainerRef.current.getBoundingClientRect();
+        const newHeight = containerRect.bottom - e.clientY;
+
+        const minHeight = 80; // ~5rem
+        const maxHeight = containerRect.height - 100; // Leave at least 100px for editor
+
+        if (newHeight >= minHeight && newHeight <= maxHeight) {
+            setOutputHeight(newHeight);
+        }
+    }, []);
+
+    const handleOutputMouseUp = useCallback(() => {
+        isOutputResizing.current = false;
+        window.removeEventListener('mousemove', handleOutputMouseMove);
+        window.removeEventListener('mouseup', handleOutputMouseUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    }, [handleOutputMouseMove]);
+
+    const handleOutputMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        isOutputResizing.current = true;
+        window.addEventListener('mousemove', handleOutputMouseMove);
+        window.addEventListener('mouseup', handleOutputMouseUp);
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'row-resize';
+    }, [handleOutputMouseMove, handleOutputMouseUp]);
 
     const activeFile = useMemo(() => findFileInTree(files, activeFileId), [files, activeFileId]);
     
@@ -539,16 +573,16 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
             </div>
         </div>
       
-        {/* Resizer */}
+        {/* Sidebar Resizer */}
         <div
             className="w-1.5 flex-shrink-0 cursor-col-resize group"
-            onMouseDown={handleMouseDown}
+            onMouseDown={handleSidebarMouseDown}
         >
             <div className="w-full h-full bg-gray-200 dark:bg-gray-700 group-hover:bg-primary-500 transition-colors duration-200"></div>
         </div>
 
         {/* Main Editor and Output */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div ref={editorAndOutputContainerRef} className="flex-1 flex flex-col min-w-0">
             <div className="flex-shrink-0 flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700">
                 {/* Tabs */}
                 <div className="flex items-center gap-1 overflow-x-auto">
@@ -578,10 +612,11 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                 <span>{isRunning ? t('codeEditor.runningProject') : t('codeEditor.runProject')}</span>
                 </button>
             </div>
-
-            <div className="flex-1 flex flex-col min-h-0">
-                {activeFile ? (
-                    <div className="flex-1 relative bg-gray-50 dark:bg-gray-900">
+            
+            {/* Editor Area */}
+            <div className="flex-1 relative bg-gray-50 dark:bg-gray-900 min-h-0">
+                 {activeFile ? (
+                    <>
                         <pre 
                             ref={preRef}
                             aria-hidden="true" 
@@ -598,26 +633,36 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                             className="absolute inset-0 p-4 font-mono text-sm bg-transparent text-transparent caret-black dark:caret-white border-0 focus:ring-0 resize-none z-10"
                             spellCheck="false"
                         />
-                    </div>
+                    </>
                 ) : (
-                    <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-500">
+                    <div className="flex h-full items-center justify-center text-gray-500">
                         {openFileIds.length > 0 ? t('codeEditor.selectFile') : t('codeEditor.emptyProject')}
                     </div>
                 )}
-                <div className="h-48 border-t border-gray-200 dark:border-gray-700 flex flex-col">
-                     <div className="flex-shrink-0 flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                        <h3 className="text-xs font-semibold uppercase tracking-wider">{t('codeEditor.output')}</h3>
-                        <button 
-                            onClick={() => onSetOutput('')}
-                            className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 p-1 rounded"
-                            title={t('codeEditor.clearOutput')}
-                        >
-                            {t('codeEditor.clear')}
-                        </button>
-                    </div>
-                    <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                       <OutputDisplay output={output} isRunning={isRunning} />
-                    </div>
+            </div>
+
+            {/* Output Resizer */}
+            <div
+                className="h-1.5 flex-shrink-0 cursor-row-resize group"
+                onMouseDown={handleOutputMouseDown}
+            >
+                <div className="w-full h-full bg-gray-200 dark:bg-gray-700 group-hover:bg-primary-500 transition-colors duration-200"></div>
+            </div>
+            
+            {/* Output Panel */}
+            <div style={{ height: `${outputHeight}px` }} className="flex-shrink-0 flex flex-col">
+                 <div className="flex-shrink-0 flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider">{t('codeEditor.output')}</h3>
+                    <button 
+                        onClick={() => onSetOutput('')}
+                        className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 p-1 rounded"
+                        title={t('codeEditor.clearOutput')}
+                    >
+                        {t('codeEditor.clear')}
+                    </button>
+                </div>
+                <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto min-h-0">
+                   <OutputDisplay output={output} isRunning={isRunning} />
                 </div>
             </div>
         </div>
