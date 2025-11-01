@@ -40,6 +40,7 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
   const [isLoading, setIsLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [generatedPath, setGeneratedPath] = useState<Omit<LearningPath, 'id'> | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const chatSessionRef = useRef<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,48 +94,50 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
   }, [ai, aiLanguage, t]);
 
   // Normalize + repair before passing to onPathCreated
-  const normalizeAndStart = (rawPath: Omit<LearningPath, 'id'>) => {
-    // 1) Nếu module có project nhưng thiếu steps, gán steps = []
-    const normalized: Omit<LearningPath, 'id'> = {
-      title: rawPath.title || 'Custom Learning Path',
-      description: rawPath.description || 'Custom learning path created by user',
-      modules: (rawPath.modules || []).map((m: any) => {
-        const hasLessons = Array.isArray(m.lessons);
-        const hasProject = !!m.project && typeof m.project === 'object';
-        const fixedProject = hasProject ? {
-          title: m.project.title || 'Guided Project',
-          description: m.project.description || '',
-          steps: Array.isArray(m.project.steps) ? m.project.steps : []
-        } : undefined;
+  const normalizeAndStart = async (rawPath: Omit<LearningPath, 'id'>) => {
+    setIsSubmitting(true);
+    try {
+      const normalized: Omit<LearningPath, 'id'> = {
+        title: rawPath.title || 'Custom Learning Path',
+        description: rawPath.description || 'Custom learning path created by user',
+        modules: (rawPath.modules || []).map((m: any) => {
+          const hasLessons = Array.isArray(m.lessons);
+          const hasProject = !!m.project && typeof m.project === 'object';
+          const fixedProject = hasProject ? {
+            title: m.project.title || 'Guided Project',
+            description: m.project.description || '',
+            steps: Array.isArray(m.project.steps) ? m.project.steps : []
+          } : undefined;
 
-        // Nếu module vừa không có lessons vừa không có steps → seed 1 lesson starter
-        const finalLessons = hasLessons ? m.lessons : (!fixedProject || fixedProject.steps.length === 0) ? [
-          { id: `lesson-${Date.now()}-${Math.random()}`, title: 'Introduction', prompt: 'Start here.', completed: false, priority: 'none' }
-        ] : undefined;
+          const finalLessons = hasLessons ? m.lessons : (!fixedProject || fixedProject.steps.length === 0) ? [
+            { id: `lesson-${Date.now()}-${Math.random()}`, title: 'Introduction', prompt: 'Start here.', completed: false, priority: 'none' }
+          ] : undefined;
 
-        // Nếu cả lessons và project đều tồn tại → ưu tiên lessons để tránh double content
-        return {
-          title: m.title || 'Untitled Module',
-          description: m.description || '',
-          lessons: finalLessons,
-          project: finalLessons ? undefined : fixedProject
-        } as LearningModule;
-      })
-    };
+          return {
+            title: m.title || 'Untitled Module',
+            description: m.description || '',
+            lessons: finalLessons,
+            project: finalLessons ? undefined : fixedProject
+          } as LearningModule;
+        })
+      };
 
-    // 2) Sửa sâu bằng repairLearningPath
-    const repaired = repairLearningPath(normalized) || normalized as any;
+      const repaired = repairLearningPath(normalized) || normalized as any;
+      if (!validateLearningPath({ ...repaired, id: 'temp' })) {
+        console.warn('Normalized path still not strictly valid, proceeding with best-effort data.');
+      }
 
-    // 3) Validate lần cuối (không chặn UI nếu fail; ta đã normalize rồi)
-    if (!validateLearningPath({ ...repaired, id: 'temp' })) {
-      console.warn('Normalized path still not strictly valid, proceeding with best-effort data.');
+      // Gọi tạo path
+      onPathCreated(repaired);
+      // Đóng modal sau khi tạo
+      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onPathCreated(repaired);
   };
 
   const handleStartPath = () => {
-      if (generatedPath) {
+      if (generatedPath && !isSubmitting) {
           normalizeAndStart(generatedPath);
       }
   };
@@ -235,10 +238,10 @@ const CreatePathModal: React.FC<CreatePathModalProps> = ({ onClose, onPathCreate
                     <p className="text-sm text-center text-gray-600 dark:text-gray-400">{t('createPathModal.confirmMessage')}</p>
                     <button
                         onClick={handleStartPath}
-                        disabled={isLoading}
+                        disabled={isLoading || isSubmitting}
                         className="w-full px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-green-300"
                         >
-                        {isLoading ? t('createPathModal.starting') : t('createPathModal.startPath')}
+                        {isLoading || isSubmitting ? t('createPathModal.starting') : t('createPathModal.startPath')}
                     </button>
                </div>
            ) : (
