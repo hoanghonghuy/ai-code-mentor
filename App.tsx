@@ -35,13 +35,71 @@ const getInitialAchievements = (pathTitle: string): Achievement[] => {
 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
+// NEW: Robust validation function for learning path data
+const validateLearningPath = (pathData: any): LearningPath => {
+  // Ensure basic structure exists
+  if (!pathData || typeof pathData !== 'object') {
+    console.warn('Invalid learning path data, using fallback');
+    return clone(learningPaths['js-basics']);
+  }
+
+  // Ensure required properties exist
+  const validatedPath: LearningPath = {
+    id: pathData.id || 'js-basics',
+    title: pathData.title || 'JavaScript Basics',
+    modules: Array.isArray(pathData.modules) ? pathData.modules : []
+  };
+
+  // Validate each module has proper structure
+  validatedPath.modules = validatedPath.modules.map((module: any) => {
+    if (!module || typeof module !== 'object') {
+      return { title: 'Unknown Module', lessons: [] };
+    }
+
+    const validatedModule: any = {
+      title: module.title || 'Unknown Module'
+    };
+
+    // Validate lessons if they exist
+    if (Array.isArray(module.lessons)) {
+      validatedModule.lessons = module.lessons.map((lesson: any) => ({
+        id: lesson.id || `lesson-${Date.now()}-${Math.random()}`,
+        title: lesson.title || 'Unknown Lesson',
+        prompt: lesson.prompt || 'Learn about this topic.',
+        completed: Boolean(lesson.completed),
+        priority: ['high', 'medium', 'low', 'none'].includes(lesson.priority) ? lesson.priority : 'none'
+      }));
+    }
+
+    // Validate project if it exists
+    if (module.project && typeof module.project === 'object') {
+      validatedModule.project = {
+        id: module.project.id || `project-${Date.now()}`,
+        title: module.project.title || 'Unknown Project',
+        description: module.project.description || 'Complete this project.',
+        steps: Array.isArray(module.project.steps) ? module.project.steps.map((step: any) => ({
+          id: step.id || `step-${Date.now()}-${Math.random()}`,
+          title: step.title || 'Unknown Step',
+          prompt: step.prompt || 'Complete this step.',
+          completed: Boolean(step.completed),
+          priority: ['high', 'medium', 'low', 'none'].includes(step.priority) ? step.priority : 'none'
+        })) : []
+      };
+    }
+
+    return validatedModule;
+  });
+
+  return validatedPath;
+};
+
 const getInitialLearningPath = (pathId: LearningPathId): LearningPath => {
   const std = learningPaths[pathId];
   if (!std) {
     console.warn(`Learning path '${pathId}' not found. Fallback to 'js-basics'.`);
-    return clone(learningPaths['js-basics']);
+    return validateLearningPath(learningPaths['js-basics']);
   }
-  return clone(std);
+  return validateLearningPath(std);
 };
 
 const defaultProjectFiles: FileSystemNode[] = [
@@ -246,8 +304,13 @@ const App: React.FC = () => {
           const data = snap.data() as UserData;
           const fresh = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
           setActivePathId(data.activePathId || fresh.activePathId);
-          setLearningPath(data.learningPath || fresh.learningPath);
-          setCustomLearningPaths(data.customLearningPaths || fresh.customLearningPaths);
+          // FIXED: Validate learning path data before setting
+          setLearningPath(validateLearningPath(data.learningPath) || fresh.learningPath);
+          // FIXED: Validate custom learning paths array
+          const validatedCustomPaths = Array.isArray(data.customLearningPaths) 
+            ? data.customLearningPaths.map(validateLearningPath)
+            : fresh.customLearningPaths;
+          setCustomLearningPaths(validatedCustomPaths);
           setActiveLessonId(data.activeLessonId || null);
           setLearningPathHistories(data.learningPathHistories || {});
           setCustomProjects(data.customProjects || []);
@@ -275,8 +338,13 @@ const App: React.FC = () => {
             const data = JSON.parse(guestJson) as UserData;
             const fresh = getInitialState((data.activePathId as LearningPathId) || 'js-basics');
             setActivePathId(data.activePathId || fresh.activePathId);
-            setLearningPath(data.learningPath || fresh.learningPath);
-            setCustomLearningPaths(data.customLearningPaths || fresh.customLearningPaths);
+            // FIXED: Validate learning path data before setting
+            setLearningPath(validateLearningPath(data.learningPath) || fresh.learningPath);
+            // FIXED: Validate custom learning paths array
+            const validatedCustomPaths = Array.isArray(data.customLearningPaths) 
+              ? data.customLearningPaths.map(validateLearningPath)
+              : fresh.customLearningPaths;
+            setCustomLearningPaths(validatedCustomPaths);
             setActiveLessonId(data.activeLessonId || null);
             setLearningPathHistories(data.learningPathHistories || {});
             setCustomProjects(data.customProjects || []);
@@ -595,20 +663,19 @@ const App: React.FC = () => {
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, [handleSendMessage, unlockAchievement, learningPathHistories]);
 
-  // FIXED: handleSelectPath supports both standard and custom paths for guest & logged-in users
+  // FIXED: Enhanced handleSelectPath with robust validation and error handling
   const handleSelectPath = useCallback((pathId: string) => {
-    const standardPath = learningPaths[pathId as LearningPathId];
-    const customPath = customLearningPaths.find(p => p.id === pathId);
-    const pathData = customPath || standardPath;
-    if (!pathData) { console.error(`Path with id "${pathId}" not found.`); return; }
-    const newPathData = clone(pathData);
-
-    if (user) {
-      if (!customPath) {
-        // Logged-in + standard path: reset progress for this path
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setAchievements(getInitialAchievements(newPathData.title));
+    try {
+      const standardPath = learningPaths[pathId as LearningPathId];
+      const customPath = customLearningPaths.find(p => p.id === pathId);
+      const pathData = customPath || standardPath;
+      
+      if (!pathData) { 
+        console.error(`Path with id "${pathId}" not found. Falling back to js-basics.`);
+        const fallbackPath = validateLearningPath(learningPaths['js-basics']);
+        setActivePathId('js-basics');
+        setLearningPath(fallbackPath);
+        setAchievements(getInitialAchievements(fallbackPath.title));
         setPoints(0);
         setActiveLessonId(null);
         setLearningPathHistories({});
@@ -617,49 +684,83 @@ const App: React.FC = () => {
         setActiveView('learningPath');
         setMessages([]);
         setChatHistory({});
-      } else {
-        // Logged-in + custom path: switch WITHOUT reset
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setActiveLessonId(null);
-        setActiveView('learningPath');
-        setMessages([]);
+        return;
       }
-    } else {
-      // Guest user: allow both standard and custom
-      if (standardPath) {
-        resetStateForGuest(pathId as LearningPathId);
+      
+      // Validate the path data before using it
+      const validatedPathData = validateLearningPath(pathData);
+
+      if (user) {
+        if (!customPath) {
+          // Logged-in + standard path: reset progress for this path
+          setActivePathId(pathId);
+          setLearningPath(validatedPathData);
+          setAchievements(getInitialAchievements(validatedPathData.title));
+          setPoints(0);
+          setActiveLessonId(null);
+          setLearningPathHistories({});
+          setNotes({});
+          setBookmarkedLessonIds([]);
+          setActiveView('learningPath');
+          setMessages([]);
+          setChatHistory({});
+        } else {
+          // Logged-in + custom path: switch WITHOUT reset
+          setActivePathId(pathId);
+          setLearningPath(validatedPathData);
+          setActiveLessonId(null);
+          setActiveView('learningPath');
+          setMessages([]);
+        }
       } else {
-        // Guest + custom path from localStorage
-        setActivePathId(pathId);
-        setLearningPath(newPathData);
-        setActiveLessonId(null);
-        setActiveView('learningPath');
-        setMessages([]);
+        // Guest user: allow both standard and custom
+        if (standardPath) {
+          resetStateForGuest(pathId as LearningPathId);
+        } else {
+          // Guest + custom path from localStorage
+          setActivePathId(pathId);
+          setLearningPath(validatedPathData);
+          setActiveLessonId(null);
+          setActiveView('learningPath');
+          setMessages([]);
+        }
       }
+    } catch (error) {
+      console.error('Error in handleSelectPath:', error);
+      // Fallback to default path in case of any error
+      resetStateForGuest('js-basics');
     }
   }, [user, resetStateForGuest, customLearningPaths]);
 
-  // FIXED: create custom path without race conditions
+  // FIXED: Enhanced handleCreateCustomPath with proper validation
   const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
-    const newPath: LearningPath = { ...pathData, id: `custom-${Date.now()}` };
-    setCustomLearningPaths(prev => {
-      const next = [...prev, newPath];
-      // Switch to new path immediately using the newly created object (no lookup)
-      setActivePathId(newPath.id);
-      setLearningPath(newPath);
-      setAchievements(getInitialAchievements(newPath.title));
-      setPoints(0);
-      setActiveLessonId(null);
-      setLearningPathHistories({});
-      setNotes({});
-      setBookmarkedLessonIds([]);
-      setActiveView('learningPath');
-      setMessages([]);
-      setChatHistory({});
-      return next;
-    });
-    setIsCreatePathModalOpen(false);
+    try {
+      // Validate the incoming path data before creating
+      const validatedData = validateLearningPath({ ...pathData, id: `custom-${Date.now()}` });
+      const newPath: LearningPath = validatedData;
+      
+      setCustomLearningPaths(prev => {
+        const next = [...prev, newPath];
+        // Switch to new path immediately using the newly created object (no lookup)
+        setActivePathId(newPath.id);
+        setLearningPath(newPath);
+        setAchievements(getInitialAchievements(newPath.title));
+        setPoints(0);
+        setActiveLessonId(null);
+        setLearningPathHistories({});
+        setNotes({});
+        setBookmarkedLessonIds([]);
+        setActiveView('learningPath');
+        setMessages([]);
+        setChatHistory({});
+        return next;
+      });
+      setIsCreatePathModalOpen(false);
+    } catch (error) {
+      console.error('Error creating custom path:', error);
+      // Show an error message or notification to user
+      alert('Có lỗi xảy ra khi tạo lộ trình học. Vui lòng thử lại.');
+    }
   }, []);
 
   // NEW: Delete custom learning path function
@@ -702,9 +803,9 @@ const App: React.FC = () => {
     if (activePathId === pathToDelete.id) {
       if (user) {
         // For logged-in users, switch to js-basics
-        const defaultPath = learningPaths['js-basics'];
+        const defaultPath = validateLearningPath(learningPaths['js-basics']);
         setActivePathId('js-basics');
-        setLearningPath(clone(defaultPath));
+        setLearningPath(defaultPath);
         setAchievements(getInitialAchievements(defaultPath.title));
         setPoints(0);
         setActiveLessonId(null);
