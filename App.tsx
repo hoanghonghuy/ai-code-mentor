@@ -70,6 +70,51 @@ const getInitialState = (pathId: LearningPathId): Omit<UserData, 'lastSaved'> =>
   };
 };
 
+const findNodeAndParent = (nodes: FileSystemNode[], nodeId: string, parent: ProjectFolder | null = null): { node: FileSystemNode, parent: ProjectFolder | null } | null => {
+    for (const node of nodes) {
+        if (node.id === nodeId) {
+            return { node, parent };
+        }
+        if (node.type === 'folder') {
+            const found = findNodeAndParent(node.children, nodeId, node);
+            if (found) return found;
+        }
+    }
+    return null;
+};
+
+const getUniqueName = (nodes: FileSystemNode[], baseName: string, isFolder: boolean, parentId: string | null): string => {
+    // This helper needs to scan the correct list of siblings.
+    const findParent = (allNodes: FileSystemNode[], pId: string): ProjectFolder | null => {
+        for (const node of allNodes) {
+            if (node.id === pId && node.type === 'folder') {
+                return node;
+            }
+            if (node.type === 'folder') {
+                const found = findParent(node.children, pId);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+    
+    const parentNode = parentId ? findParent(nodes, parentId) : null;
+    const siblingNodes = parentNode ? parentNode.children : nodes.filter(n => n.parentId === null);
+
+    const existingNames = new Set(siblingNodes.map(n => n.name));
+
+    let finalName = baseName;
+    let counter = 1;
+    const extension = isFolder ? '' : baseName.includes('.') ? `.${baseName.split('.').pop()}` : '';
+    const nameWithoutExt = isFolder ? baseName : baseName.includes('.') ? baseName.slice(0, baseName.lastIndexOf('.')) : baseName;
+
+    while (existingNames.has(finalName)) {
+        finalName = `${nameWithoutExt} ${counter}${extension}`;
+        counter++;
+    }
+    return finalName;
+};
+
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
 
@@ -88,7 +133,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'learningPath' | 'customProject'>('learningPath');
   const [activeMainView, setActiveMainView] = useState<'chat' | 'tools'>('chat');
 
-  // FIX: Called getInitialState without the required pathId argument. Provided 'js-basics' as a default to ensure correct initialization.
+  // FIX: Provide a default 'js-basics' pathId to getInitialState to resolve the "Expected 1 arguments, but got 0" error.
   const initialState = useMemo(() => getInitialState('js-basics'), []);
   
   // Learning Path State
@@ -489,38 +534,6 @@ const App: React.FC = () => {
       };
       setProjectFiles(prev => updateNode(prev));
   }, []);
-
-  const getUniqueName = (nodes: FileSystemNode[], baseName: string, isFolder: boolean, parentId: string | null): string => {
-      const siblingNodes = parentId 
-          ? (findNodeAndParent(nodes, parentId)?.node as ProjectFolder)?.children || [] 
-          : nodes;
-  
-      const existingNames = new Set(siblingNodes.map(n => n.name));
-  
-      let finalName = baseName;
-      let counter = 1;
-      const extension = isFolder ? '' : baseName.includes('.') ? `.${baseName.split('.').pop()}` : '';
-      const nameWithoutExt = isFolder ? baseName : baseName.includes('.') ? baseName.slice(0, baseName.lastIndexOf('.')) : baseName;
-  
-      while (existingNames.has(finalName)) {
-          finalName = `${nameWithoutExt} ${counter}${extension}`;
-          counter++;
-      }
-      return finalName;
-  };
-  
-  const findNodeAndParent = (nodes: FileSystemNode[], nodeId: string, parent: ProjectFolder | null = null): { node: FileSystemNode, parent: ProjectFolder | null } | null => {
-      for (const node of nodes) {
-          if (node.id === nodeId) {
-              return { node, parent };
-          }
-          if (node.type === 'folder') {
-              const found = findNodeAndParent(node.children, nodeId, node);
-              if (found) return found;
-          }
-      }
-      return null;
-  };
   
   const addNodeToParent = (nodes: FileSystemNode[], parentId: string | null, newNode: FileSystemNode): FileSystemNode[] => {
       if (parentId === null) {
@@ -629,61 +642,80 @@ const App: React.FC = () => {
   }, [nodeToDelete, projectFiles, openFileIds, activeFileId]);
   
   const handleMoveNode = useCallback((draggedNodeId: string, targetFolderId: string | null) => {
-      setProjectFiles(currentFiles => {
-          let draggedNode: FileSystemNode | null = null;
-          
-          // Check for invalid move: dropping a folder into itself or its descendant
-          let p = targetFolderId;
-          while (p) {
-              if (p === draggedNodeId) {
-                  console.error("Cannot move a folder into itself or a child.");
-                  return currentFiles;
-              }
-              p = findNodeAndParent(currentFiles, p)?.parent?.id ?? null;
-          }
+    setProjectFiles(currentFiles => {
+        // --- Pre-flight checks ---
+        const draggedNodeInfo = findNodeAndParent(currentFiles, draggedNodeId);
+        if (!draggedNodeInfo) return currentFiles;
+        
+        const { node: draggedNode } = draggedNodeInfo;
 
-          // Recursive function to remove the node from its original location
-          const removeNode = (nodes: FileSystemNode[]): FileSystemNode[] => {
-              const filteredNodes: FileSystemNode[] = [];
-              for (const node of nodes) {
-                  if (node.id === draggedNodeId) {
-                      draggedNode = { ...node, parentId: targetFolderId };
-                  } else {
-                      if (node.type === 'folder') {
-                          node.children = removeNode(node.children);
-                      }
-                      filteredNodes.push(node);
-                  }
-              }
-              return filteredNodes;
-          };
+        // 1. Prevent moving into the same parent
+        if ((draggedNode.parentId ?? null) === targetFolderId) {
+            return currentFiles;
+        }
 
-          let newFiles = removeNode(JSON.parse(JSON.stringify(currentFiles)));
+        // 2. Prevent moving a folder into itself or a descendant
+        if (draggedNode.type === 'folder' && targetFolderId) {
+            let currentId: string | null = targetFolderId;
+            while (currentId) {
+                if (currentId === draggedNode.id) {
+                    console.error("Invalid move: cannot move a folder into itself or a descendant.");
+                    return currentFiles;
+                }
+                const parentInfo = findNodeAndParent(currentFiles, currentId);
+                currentId = parentInfo?.node.parentId ?? null;
+            }
+        }
 
-          if (!draggedNode) {
-              return currentFiles; // Node not found, something went wrong
-          }
+        // --- State Manipulation ---
 
-          // Recursive function to add the node to the new location
-          const addNode = (nodes: FileSystemNode[]): FileSystemNode[] => {
-              if (targetFolderId === null) {
-                  // Dropping at the root
-                  return [...nodes, draggedNode!];
-              }
-              return nodes.map(node => {
-                  if (node.id === targetFolderId && node.type === 'folder') {
-                      return { ...node, children: [...node.children, draggedNode!] };
-                  }
-                  if (node.type === 'folder') {
-                      return { ...node, children: addNode(node.children) };
-                  }
-                  return node;
-              });
-          };
+        let nodeToMove: FileSystemNode | null = null;
+        
+        // 1. Remove the node from its original position (immutable)
+        const removeRecursive = (nodes: FileSystemNode[], id: string): FileSystemNode[] => {
+            return nodes.filter(node => {
+                if (node.id === id) {
+                    nodeToMove = JSON.parse(JSON.stringify(node)); // Deep copy the node to move
+                    return false;
+                }
+                if (node.type === 'folder') {
+                    node.children = removeRecursive(node.children, id);
+                }
+                return true;
+            });
+        };
+        
+        let newFileTree = removeRecursive(JSON.parse(JSON.stringify(currentFiles)), draggedNodeId);
 
-          return addNode(newFiles);
-      });
+        if (!nodeToMove) return currentFiles; // Node not found, abort
+
+        // 2. Update node's properties (parentId, unique name)
+        nodeToMove.parentId = targetFolderId;
+        // Pass the new tree *without* the moved node to getUniqueName
+        nodeToMove.name = getUniqueName(newFileTree, nodeToMove.name, nodeToMove.type === 'folder', targetFolderId);
+
+        // 3. Add the node to its new parent (immutable)
+        const addRecursive = (nodes: FileSystemNode[], parentId: string | null, nodeToAdd: FileSystemNode): FileSystemNode[] => {
+            if (parentId === null) {
+                return [...nodes, nodeToAdd];
+            }
+            return nodes.map(node => {
+                if (node.type === 'folder' && node.id === parentId) {
+                    return { ...node, children: [...node.children, nodeToAdd], isOpen: true };
+                }
+                if (node.type === 'folder') {
+                    return { ...node, children: addRecursive(node.children, parentId, nodeToAdd) };
+                }
+                return node;
+            });
+        };
+        
+        newFileTree = addRecursive(newFileTree, targetFolderId, nodeToMove);
+        
+        return newFileTree;
+    });
   }, []);
+
 
   const serializeProject = (nodes: FileSystemNode[], indent = ''): string => {
     return nodes.map(node => {
@@ -705,7 +737,12 @@ const App: React.FC = () => {
     setProjectOutput(t('playground.executing'));
     
     const projectStructure = serializeProject(projectFiles);
-    const prompt = `Analyze the following project structure and files. Provide a simulated output as if it were running in a browser or console. Explain what the project does and how the files interact.
+    const prompt = `You are a browser and console simulator. Given the following project files, generate a concise, realistic output.
+- For web projects (HTML/CSS/JS), provide a "BROWSER VIEW" section showing the rendered text content and a "CONSOLE LOGS" section for any console output.
+- Do NOT explain the code. Only provide the simulated output.
+- Use markdown code blocks for the view and log sections.
+- If there are no console logs, omit the "CONSOLE LOGS" section.
+- If the project is just a script, provide only the console output.
 
 Project Files:
 ${projectStructure}`;
@@ -1246,6 +1283,7 @@ ${projectStructure}`;
                     onRunProject={handleRunProject}
                     isRunning={isProjectRunning}
                     output={projectOutput}
+                    onSetOutput={setProjectOutput}
                     onCreateFile={handleCreateFile}
                     onCreateFolder={handleCreateFolder}
                     onRenameNode={handleRenameNode}

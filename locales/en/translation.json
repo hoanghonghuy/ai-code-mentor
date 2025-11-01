@@ -136,6 +136,9 @@
     "newFile": "New File",
     "newFolder": "New Folder",
     "rename": "Rename",
-    "delete": "Delete"
+    "delete": "Delete",
+    "clear": "Clear",
+    "clearOutput": "Clear output",
+    "outputPlaceholder": "Output will appear here..."
   }
 }

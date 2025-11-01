@@ -136,6 +136,9 @@
     "newFile": "Tệp mới",
     "newFolder": "Thư mục mới",
     "rename": "Đổi tên",
-    "delete": "Xóa"
+    "delete": "Xóa",
+    "clear": "Xóa",
+    "clearOutput": "Xóa đầu ra",
+    "outputPlaceholder": "Đầu ra sẽ xuất hiện ở đây..."
   }
 }
