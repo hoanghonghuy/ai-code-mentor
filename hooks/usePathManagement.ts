@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import type { LearningPath, LearningPathId, User } from '../types';
 import { 
-  findPathById,
+  findPathByIdWithRepair,
   isStandardPath,
   createCustomPath,
   getPathSwitchState,
@@ -58,17 +58,16 @@ export const usePathManagement = (
   } = updaters;
 
   const handleSelectPath = useCallback((pathId: string) => {
-    const pathData = findPathById(pathId, customLearningPaths);
+    // ENHANCED: Use repair-enabled path finding
+    const pathData = findPathByIdWithRepair(pathId, customLearningPaths);
     
     if (!pathData) {
-      console.error(`Path with id "${pathId}" not found.`);
+      console.error(`Path with id "${pathId}" not found or could not be repaired.`);
       return;
     }
 
-    if (!validateLearningPath(pathData)) {
-      console.error(`Path with id "${pathId}" has invalid structure.`);
-      return;
-    }
+    // Additional validation is already done in findPathByIdWithRepair
+    console.log(`Successfully selected path: ${pathData.title}`);
 
     const isStandard = isStandardPath(pathId);
 
@@ -113,12 +112,15 @@ export const usePathManagement = (
   }, [user, customLearningPaths, resetStateForGuest, setActivePathId, setLearningPath, setAchievements, setPoints, setActiveLessonId, setLearningPathHistories, setNotes, setBookmarkedLessonIds, setActiveView, setMessages, setChatHistory]);
 
   const handleCreateCustomPath = useCallback((pathData: Omit<LearningPath, 'id'>) => {
-    if (!validateLearningPath({ ...pathData, id: 'temp' })) {
-      console.error('Invalid path data structure');
+    // Create temporary path for validation
+    const tempPath = { ...pathData, id: 'temp' };
+    if (!validateLearningPath(tempPath)) {
+      console.error('Invalid path data structure provided for creation');
       return;
     }
 
     const newPath = createCustomPath(pathData);
+    console.log(`Created new custom path: ${newPath.title}`);
     
     // Update states in batch to avoid race conditions
     setCustomLearningPaths(prev => {
