@@ -30,7 +30,10 @@
     "standardPaths": "Standard Paths",
     "yourPaths": "Your Paths",
     "deletePath": "Delete Path",
-    "managePaths": "Manage Paths"
+    "managePaths": "Manage Paths",
+    "selectPath": "Select a path",
+    "customLabel": "Custom",
+    "modulesCount": "{{count}} modules"
   },
   "chat": {
     "title": "AI Mentor Chat",
