@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { PlayIcon } from './icons';
@@ -51,14 +52,15 @@ const CodePlayground: React.FC<CodePlaygroundProps> = ({ onFirstRun }) => {
   const codeRef = useRef<HTMLElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // FIX: Use process.env.API_KEY to align with Vite configuration and guidelines, resolving TypeScript errors.
+  const API_KEY = process.env.API_KEY;
 
   const ai = useMemo(() => {
-    // FIX: Switched from \`import.meta.env.VITE_API_KEY\` to \`process.env.API_KEY\` to align with coding guidelines and fix TypeScript error.
-    if (process.env.API_KEY) {
-      return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (API_KEY) {
+      return new GoogleGenAI({ apiKey: API_KEY });
     }
     return null;
-  }, []);
+  }, [API_KEY]);
 
   useEffect(() => {
     if (codeRef.current) {

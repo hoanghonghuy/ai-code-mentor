@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile, Theme } from './types';
@@ -20,6 +21,8 @@ import CreatePathModal from './components/CreatePathModal';
 
 const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
 const THEME_KEY = 'ai-mentor-theme';
+// FIX: Use process.env.API_KEY to align with Vite configuration and guidelines, resolving TypeScript errors.
+const API_KEY = process.env.API_KEY;
 
 const getInitialAchievements = (pathTitle: string): Achievement[] => {
     const definitions: Omit<Achievement, 'unlocked'>[] = [
@@ -195,8 +198,8 @@ const App: React.FC = () => {
 
 
   const ai = useMemo(() => {
-    if (process.env.API_KEY) {
-      return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    if (API_KEY) {
+      return new GoogleGenAI({ apiKey: API_KEY });
     }
     return null;
   }, []);
@@ -1367,7 +1370,7 @@ ${projectStructure}`;
     );
   }
 
-  if (!process.env.API_KEY) {
+  if (!API_KEY) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-lg shadow-xl">
