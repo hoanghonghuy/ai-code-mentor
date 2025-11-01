@@ -95,69 +95,47 @@ export const getPathSwitchState = (targetPath: LearningPath, resetProgress: bool
 };
 
 /**
- * FIXED: More flexible validation for learning path data structure
- * Supports both standard and custom learning paths with various structures
+ * Seed default project steps when empty
+ */
+const seedDefaultProjectSteps = () => ([
+  { id: `step-${Date.now()}-1`, title: 'Thiết lập Leaflet', prompt: 'Khởi tạo bản đồ Leaflet cơ bản.', completed: false, priority: 'none' },
+  { id: `step-${Date.now()}-2`, title: 'Tải & hiển thị GeoJSON', prompt: 'Tải file GeoJSON và render lên bản đồ.', completed: false, priority: 'none' },
+  { id: `step-${Date.now()}-3`, title: 'Markers & Popups', prompt: 'Thêm markers với popup mô tả.', completed: false, priority: 'none' }
+]);
+
+/**
+ * FIXED: More flexible validation for learning path data structure with inline coercion
  */
 export const validateLearningPath = (path: any): path is LearningPath => {
   try {
-    // Basic structure checks
-    if (!path || typeof path !== 'object') {
-      console.warn('Path validation failed: not an object');
-      return false;
-    }
-    
-    if (!safeString(path.id) || !safeString(path.title)) {
-      console.warn('Path validation failed: missing id or title');
-      return false;
-    }
-    
-    // Modules must exist and be an array
-    if (!Array.isArray(path.modules)) {
-      console.warn('Path validation failed: modules is not an array');
-      return false;
-    }
-    
-    // More flexible module validation
-    const isValidModule = (module: any): boolean => {
-      if (!module || typeof module !== 'object') return false;
-      if (!safeString(module.title)) return false;
-      
-      // Module can have lessons, project, or both
-      const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
-      const hasProject = module.project && typeof module.project === 'object';
-      
-      if (!hasLessons && !hasProject) {
-        console.warn(`Module '${module.title}' has neither lessons nor project`);
-        return false;
+    if (!path || typeof path !== 'object') return false;
+    if (!safeString(path.id) && !safeString(path.title)) return false;
+    if (!Array.isArray(path.modules)) return false;
+
+    path.modules = path.modules.map((module: any) => {
+      const title = safeString(module.title, 'Untitled Module');
+      const lessons = Array.isArray(module.lessons) ? module.lessons : undefined;
+      let project = module.project && typeof module.project === 'object' ? module.project : undefined;
+
+      if (project) {
+        project.title = safeString(project.title, 'Guided Project');
+        if (!Array.isArray(project.steps)) project.steps = [];
+        // Seed default steps if empty
+        if (project.steps.length === 0) project.steps = seedDefaultProjectSteps();
       }
-      
-      // If has project, validate project structure
-      if (hasProject) {
-        if (!safeString(module.project.title)) {
-          console.warn(`Project in module '${module.title}' missing title`);
-          return false;
-        }
-        if (!Array.isArray(module.project.steps)) {
-          console.warn(`Project in module '${module.title}' missing or invalid steps`);
-          return false;
-        }
-      }
-      
-      return true;
-    };
-    
-    // Validate all modules (but allow empty modules array for new custom paths)
-    if (path.modules.length > 0) {
-      const invalidModules = path.modules.filter((m: any) => !isValidModule(m));
-      if (invalidModules.length > 0) {
-        console.warn(`Path '${path.title}' has ${invalidModules.length} invalid modules`);
-        return false;
-      }
-    }
-    
-    console.log(`Path '${path.title}' passed validation`);
+
+      // If both missing → seed a starter lesson
+      const finalLessons = lessons || (!project ? [
+        { id: `lesson-${Date.now()}`, title: 'Introduction', prompt: 'Start here.', completed: false, priority: 'none' }
+      ] : undefined);
+
+      // If both exist → prefer lessons
+      if (finalLessons) project = undefined;
+
+      return { ...module, title, lessons: finalLessons, project };
+    });
+
     return true;
-    
   } catch (error) {
     console.error('Error during path validation:', error);
     return false;
@@ -189,59 +167,15 @@ export const getAllPathItems = (path: LearningPath | null | undefined): any[] =>
 };
 
 /**
- * ADDED: Repair/normalize learning path structure if possible
- * Attempts to fix common issues in stored custom paths
+ * Repair function keeps as backup; validate already coerces/seed now
  */
 export const repairLearningPath = (path: any): LearningPath | null => {
-  if (!path || typeof path !== 'object') return null;
-  
   try {
-    const repaired: LearningPath = {
-      id: safeString(path.id) || `custom-${Date.now()}`,
-      title: safeString(path.title, 'Untitled Path'),
-      description: safeString(path.description, 'Custom learning path'),
-      modules: safeArray(path.modules).map((module: any) => ({
-        title: safeString(module.title, 'Untitled Module'),
-        description: safeString(module.description),
-        lessons: safeArray(module.lessons).map((lesson: any) => ({
-          id: safeString(lesson.id) || `lesson-${Date.now()}-${Math.random()}`,
-          title: safeString(lesson.title, 'Untitled Lesson'),
-          prompt: safeString(lesson.prompt, 'Start learning!'),
-          completed: Boolean(lesson.completed),
-          priority: lesson.priority || 'none',
-        })),
-        project: module.project ? {
-          title: safeString(module.project.title, 'Untitled Project'),
-          description: safeString(module.project.description),
-          steps: safeArray(module.project.steps).map((step: any) => ({
-            id: safeString(step.id) || `step-${Date.now()}-${Math.random()}`,
-            title: safeString(step.title, 'Untitled Step'),
-            prompt: safeString(step.prompt, 'Continue with this step!'),
-            completed: Boolean(step.completed),
-            priority: step.priority || 'none',
-          })),
-        } : undefined,
-      })),
-    };
-    
-    // Ensure at least one valid module exists
-    if (repaired.modules.length === 0) {
-      repaired.modules.push({
-        title: 'Getting Started',
-        description: 'Begin your learning journey',
-        lessons: [{
-          id: `lesson-${Date.now()}`,
-          title: 'Introduction',
-          prompt: 'Welcome to your custom learning path! Let\'s begin.',
-          completed: false,
-          priority: 'none',
-        }],
-      });
-    }
-    
-    return repaired;
-  } catch (error) {
-    console.error('Failed to repair learning path:', error);
+    const clone = JSON.parse(JSON.stringify(path));
+    // Reuse validation to coerce & seed
+    const ok = validateLearningPath({ ...clone, id: clone.id || 'temp' });
+    return ok ? { ...clone, id: clone.id } : null;
+  } catch {
     return null;
   }
 };
@@ -252,21 +186,8 @@ export const repairLearningPath = (path: any): LearningPath | null => {
 export const findPathByIdWithRepair = (pathId: string, customPaths: LearningPath[]): LearningPath | null => {
   const found = findPathById(pathId, customPaths);
   if (!found) return null;
-  
-  // First try normal validation
-  if (validateLearningPath(found)) {
-    return found;
-  }
-  
-  // If validation fails, attempt repair
-  console.warn(`Path '${pathId}' failed validation, attempting repair...`);
-  const repaired = repairLearningPath(found);
-  
-  if (repaired && validateLearningPath(repaired)) {
-    console.log(`Successfully repaired path '${pathId}'`);
-    return repaired;
-  }
-  
-  console.error(`Cannot repair path '${pathId}', falling back to null`);
-  return null;
+  // validate now coerces & seeds; always returns boolean
+  const copy = JSON.parse(JSON.stringify(found));
+  const ok = validateLearningPath({ ...copy, id: copy.id || 'temp' });
+  return ok ? copy : null;
 };
