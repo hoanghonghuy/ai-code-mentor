@@ -18,8 +18,8 @@ interface CodeEditorProps {
     onUpdateFileContent: (fileId: string, newContent: string) => void;
     onRunProject: () => void;
     isRunning: boolean;
-    output: string;
-    onSetOutput: (output: string) => void;
+    output: any;
+    onSetOutput: (output: any) => void;
     // File operations
     onCreateFile: (parentId: string | null) => void;
     onCreateFolder: (parentId: string | null) => void;
@@ -287,6 +287,108 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({ node, onOpenFile, level, on
     );
 };
 
+const OutputDisplay: React.FC<{ output: any; isRunning: boolean; }> = ({ output, isRunning }) => {
+    const { t } = useTranslation();
+
+    if (isRunning) {
+        return (
+            <div className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
+                {t('playground.executing')}
+            </div>
+        );
+    }
+
+    let parsedOutput: any = null;
+    let isRawText = false;
+
+    if (typeof output === 'string') {
+        try {
+            // It might be a stringified JSON from a previous state or a raw string
+            const potentialJson = JSON.parse(output);
+            if(typeof potentialJson === 'object' && potentialJson !== null) {
+                parsedOutput = potentialJson;
+            } else {
+                 isRawText = true;
+            }
+        } catch (e) {
+            isRawText = true;
+        }
+        if(isRawText || !output) {
+             parsedOutput = { type: 'raw', rawText: output };
+        }
+    } else if (output && typeof output === 'object') {
+        parsedOutput = output;
+    }
+
+    if (!parsedOutput || Object.keys(parsedOutput).length === 0) {
+        return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
+    }
+
+    if (parsedOutput.type === 'web') {
+        return (
+            <div className="p-4 font-sans">
+                {/* Virtual Browser Window */}
+                <div className="mx-auto my-2 max-w-full w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg shadow-md bg-gray-100 dark:bg-gray-800">
+                    {/* Title bar */}
+                    <div className="flex items-center gap-1.5 p-2 border-b-2 border-dashed border-gray-300 dark:border-gray-600">
+                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <div className="flex-1 text-center text-xs text-gray-600 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-0.5">
+                            {parsedOutput.windowTitle || 'Untitled'}
+                        </div>
+                    </div>
+                    {/* Browser content */}
+                    <div className="p-4 bg-white dark:bg-gray-900 rounded-b-lg min-h-[5rem]">
+                        <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 dark:text-gray-200">
+                            {parsedOutput.browserContent || ''}
+                        </pre>
+                    </div>
+                </div>
+
+                {/* Console Logs */}
+                {parsedOutput.consoleLogs && parsedOutput.consoleLogs.length > 0 && (
+                    <div className="mt-4">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Console</h4>
+                        <div className="bg-gray-900 text-gray-200 font-mono text-xs rounded-md p-3 overflow-x-auto">
+                            {parsedOutput.consoleLogs.map((log: string, i: number) => (
+                                <div key={i} className="flex items-start border-b border-gray-700 last:border-b-0 py-1">
+                                    <span className="text-gray-500 mr-2 flex-shrink-0">&gt;</span>
+                                    <pre className="flex-1 whitespace-pre-wrap break-all">{log}</pre>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+    
+    let textToDisplay = '';
+    if (parsedOutput.type === 'script' && Array.isArray(parsedOutput.consoleLogs)) {
+        textToDisplay = parsedOutput.consoleLogs.join('\n');
+    } else if (parsedOutput.type === 'error') {
+        textToDisplay = `Error: ${parsedOutput.error}`;
+    } else if (parsedOutput.type === 'raw') {
+        textToDisplay = parsedOutput.rawText;
+    } else if (typeof parsedOutput === 'string') {
+        textToDisplay = parsedOutput;
+    } else if (typeof parsedOutput === 'object') {
+        // Fallback for unexpected object structures
+        textToDisplay = JSON.stringify(parsedOutput, null, 2);
+    }
+
+    if (!textToDisplay) {
+        return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
+    }
+
+    return (
+        <pre className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
+            {textToDisplay}
+        </pre>
+    );
+};
+
 
 const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const { 
@@ -514,9 +616,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                         </button>
                     </div>
                     <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                        <pre className="p-4 text-sm whitespace-pre-wrap font-mono text-gray-800 dark:text-gray-300">
-                             {output || <span className="text-gray-500">{t('codeEditor.outputPlaceholder')}</span>}
-                        </pre>
+                       <OutputDisplay output={output} isRunning={isRunning} />
                     </div>
                 </div>
             </div>

@@ -169,7 +169,7 @@ const App: React.FC = () => {
   const [projectFiles, setProjectFiles] = useState<FileSystemNode[]>(initialState.projectFiles);
   const [openFileIds, setOpenFileIds] = useState<string[]>(initialState.openFileIds);
   const [activeFileId, setActiveFileId] = useState<string | null>(initialState.activeFileId);
-  const [projectOutput, setProjectOutput] = useState('');
+  const [projectOutput, setProjectOutput] = useState<any>('');
   const [isProjectRunning, setIsProjectRunning] = useState(false);
 
   // Settings State
@@ -729,7 +729,7 @@ const App: React.FC = () => {
 
   const handleRunProject = useCallback(async () => {
     if (!ai) {
-        setProjectOutput("Error: Gemini AI not initialized. Check API Key.");
+        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
         return;
     };
 
@@ -737,12 +737,33 @@ const App: React.FC = () => {
     setProjectOutput(t('playground.executing'));
     
     const projectStructure = serializeProject(projectFiles);
-    const prompt = `You are a browser and console simulator. Given the following project files, generate a concise, realistic output.
-- For web projects (HTML/CSS/JS), provide a "BROWSER VIEW" section showing the rendered text content and a "CONSOLE LOGS" section for any console output.
-- Do NOT explain the code. Only provide the simulated output.
-- Use markdown code blocks for the view and log sections.
-- If there are no console logs, omit the "CONSOLE LOGS" section.
-- If the project is just a script, provide only the console output.
+    const prompt = `You are a web project simulator. Your task is to analyze the provided HTML, CSS, and JavaScript files and generate a single JSON object representing the final output.
+
+**JSON Output Rules:**
+1.  Your entire response MUST be a single, valid JSON object. Do not include any text, markdown, or code fences outside of the JSON structure.
+2.  If the project is a standard web page (has an \`index.html\`):
+    - \`type\`: "web"
+    - \`windowTitle\`: A string extracted from the \`<title>\` tag in the HTML. Default to "Untitled" if not found.
+    - \`browserContent\`: A string representing ONLY THE VISIBLE TEXT content that would be rendered on the page. Preserve line breaks and basic formatting. Do NOT include HTML tags.
+    - \`consoleLogs\`: An array of strings, where each string is a message logged to the console. If no logs, provide an empty array \`[]\`.
+3.  If the project is just a script (e.g., only a .js file) and not a web page:
+    - \`type\`: "script"
+    - \`consoleLogs\`: An array of strings for the console output.
+4.  If there is a clear error in the code:
+    - \`type\`: "error"
+    - \`error\`: A string describing the error.
+
+**Example for a web project:**
+\`\`\`json
+{
+  "type": "web",
+  "windowTitle": "My App",
+  "browserContent": "Hello, World!\\nThis is a paragraph.",
+  "consoleLogs": ["Script loaded.", "Button was clicked!"]
+}
+\`\`\`
+
+Now, analyze the following project files and provide only the JSON output.
 
 Project Files:
 ${projectStructure}`;
@@ -752,10 +773,27 @@ ${projectStructure}`;
         model: 'gemini-2.5-flash',
         contents: prompt
       });
-      setProjectOutput(response.text.trim());
+      
+      let rawText = response.text.trim();
+      // The model sometimes wraps the JSON in markdown, so we need to strip it.
+      if (rawText.startsWith('```json')) {
+        rawText = rawText.substring(7, rawText.length - 3).trim();
+      } else if (rawText.startsWith('```')) {
+        rawText = rawText.substring(3, rawText.length - 3).trim();
+      }
+      
+      try {
+        const parsedJson = JSON.parse(rawText);
+        setProjectOutput(parsedJson);
+      } catch (parseError) {
+        console.error('Failed to parse AI response as JSON:', parseError);
+        // Fallback to showing the raw text if JSON parsing fails
+        setProjectOutput({ type: 'raw', rawText: rawText || 'The AI returned an invalid format.' });
+      }
+
     } catch (error) {
       console.error('Error executing project:', error);
-      setProjectOutput('An unexpected error occurred while running the project.');
+      setProjectOutput({ type: 'error', error: 'An unexpected error occurred while running the project.' });
     } finally {
       setIsProjectRunning(false);
     }
