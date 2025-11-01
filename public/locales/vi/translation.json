@@ -1,0 +1,178 @@
+{
+  "loading": "Đang tải AI Code Mentor...",
+  "apiKeyNotFound": "Không tìm thấy khóa API",
+  "apiKeyNotFoundMessage": "Vui lòng đặt biến môi trường API_KEY của bạn để sử dụng AI Code Mentor.",
+  "guestModeMessage": "Bạn đang ở chế độ khách. <1>Đăng nhập</1> để lưu tiến trình của bạn.",
+  "header": {
+    "title": "AI Code Mentor",
+    "login": "Đăng nhập",
+    "logout": "Đăng xuất",
+    "toggleTheme": "Chuyển đổi chế độ tối"
+  },
+  "userMenu": {
+    "logout": "Đăng xuất"
+  },
+  "sidebar": {
+    "myProjects": "Dự án của tôi",
+    "learning": "Học tập",
+    "projects": "Dự án",
+    "showBookmarkedOnly": "Chỉ hiện thị mục đã đánh dấu",
+    "lessons": "Bài học",
+    "achievements": "Thành tích",
+    "settings": "Cài đặt",
+    "guidedProject": "DỰ ÁN HƯỚNG DẪN",
+    "sortBy": "Sắp xếp theo",
+    "sort": {
+      "default": "Mặc định",
+      "priority": "Ưu tiên"
+    },
+    "newPath": "Tạo Lộ trình mới",
+    "standardPaths": "Lộ trình Tiêu chuẩn",
+    "yourPaths": "Lộ trình của Bạn"
+  },
+  "chat": {
+    "title": "Trò chuyện với Mentor AI",
+    "placeholder": "Hỏi người hướng dẫn của bạn...",
+    "send": "Gửi",
+    "searchPlaceholder": "Tìm kiếm tin nhắn...",
+    "searchResults": "{{current}} trên {{total}}",
+    "noResults": "0 kết quả",
+    "copyText": "Sao chép văn bản",
+    "copyMarkdown": "Sao chép Markdown",
+    "copied": "Đã sao chép",
+    "sources": "Nguồn",
+    "sendError": "Không thể gửi tin nhắn. AI có thể đang bận hoặc có sự cố mạng. Vui lòng thử lại sau giây lát.",
+    "errorTitle": "Lỗi",
+    "clearHistory": "Xóa lịch sử trò chuyện",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "challengeMe": "Thử thách tôi"
+  },
+  "playground": {
+    "title": "Sân chơi mã",
+    "run": "Chạy",
+    "running": "Đang chạy...",
+    "output": "Đầu ra:",
+    "executing": "Đang thực thi mã..."
+  },
+  "notes": {
+    "title": "Ghi chú của tôi",
+    "disabled": "Ghi chú chỉ khả dụng trong chế độ Lộ trình học tập.",
+    "selectLesson": "Chọn một bài học để bắt đầu ghi chú.",
+    "notesFor": "Ghi chú cho: <1>{{lessonTitle}}</1>",
+    "placeholder": "Nhập ghi chú của bạn cho \"{{lessonTitle}}\" tại đây..."
+  },
+  "achievementsView": {
+    "title": "Thành tích"
+  },
+  "notification": {
+    "unlocked": "Đã mở khóa thành tích!"
+  },
+  "settings": {
+    "customDocsTitle": "Nguồn tài liệu tùy chỉnh",
+    "customDocsDescription": "Thêm URL vào tài liệu để AI có thể tham khảo. (Lưu ý: Đây là tính năng nền tảng cho các tra cứu được nhắm mục tiêu trong tương lai).",
+    "add": "Thêm",
+    "yourSources": "Nguồn của bạn",
+    "searchSources": "Tìm kiếm nguồn...",
+    "noSourcesFound": "Không tìm thấy nguồn nào cho \"{{searchTerm}}\".",
+    "noSourcesAdded": "Chưa có nguồn tùy chỉnh nào được thêm.",
+    "interfaceLanguage": "Ngôn ngữ giao diện",
+    "aiResponseLanguage": "Ngôn ngữ phản hồi của AI",
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  },
+  "customProjects": {
+    "noProjects": "Chưa có dự án nào.",
+    "noProjectsHint": "Nhấp vào \"Dự án mới\" để bắt đầu xây dựng!",
+    "newProject": "Dự án mới",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "newProjectModal": {
+    "title": "Tạo dự án mới",
+    "editTitle": "Chỉnh sửa dự án",
+    "description": "Mô tả mục tiêu dự án của bạn, và AI Mentor sẽ hướng dẫn bạn từ đó.",
+    "projectName": "Tên dự án",
+    "projectNamePlaceholder": "VD: Portfolio cá nhân",
+    "projectGoal": "Bạn muốn xây dựng cái gì?",
+    "projectGoalPlaceholder": "VD: Một trang web đơn giản để giới thiệu công việc thiết kế của tôi, được xây dựng bằng React và Tailwind CSS.",
+    "cancel": "Hủy",
+    "createProject": "Tạo dự án",
+    "saveChanges": "Lưu thay đổi",
+    "scaffoldTitle": "Dựng sườn dự án",
+    "initialBotMessage": "Xin chào! Tôi có thể giúp bạn thiết lập một dự án mới. Đầu tiên, cho tôi biết tên và mục tiêu chính của dự án là gì?",
+    "generateProject": "Tạo tệp dự án",
+    "generating": "Đang tạo...",
+    "preview": "Xem trước cấu trúc tệp",
+    "confirmMessage": "Tôi đã hiểu yêu cầu của bạn. Đây là cấu trúc tệp tôi sẽ tạo ra. Cấu trúc này có đúng không?"
+  },
+  "createPathModal": {
+    "title": "Tạo Lộ trình Học tập Cá nhân hóa",
+    "initialBotMessage": "Xin chào! Tôi có thể tạo một lộ trình học tập tùy chỉnh cho bạn. Mục tiêu học tập cuối cùng của bạn là gì? Ví dụ: 'Trở thành một nhà phát triển backend' hoặc 'Học cách xây dựng bản đồ web tương tác'.",
+    "preview": "Xem trước Lộ trình được tạo",
+    "confirmMessage": "Đây là lộ trình học tập tôi đã thiết kế cho bạn. Lộ trình này có phù hợp không?",
+    "startPath": "Bắt đầu Lộ trình này",
+    "starting": "Đang bắt đầu..."
+  },
+  "deleteProjectModal": {
+    "title": "Xóa dự án",
+    "message": "Bạn có chắc chắn muốn xóa \"{{projectName}}\"? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa"
+  },
+  "clearHistoryModal": {
+    "title": "Xóa Lịch sử Trò chuyện",
+    "message": "Bạn có chắc chắn muốn xóa toàn bộ lịch sử trò chuyện cho phiên này không? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa Lịch sử"
+  },
+  "deleteNodeModal": {
+    "title": "Xóa mục",
+    "messageFile": "Bạn có chắc chắn muốn xóa vĩnh viễn tệp \"{{nodeName}}\" không?",
+    "messageFolder": "Bạn có chắc chắn muốn xóa vĩnh viễn thư mục \"{{nodeName}}\" và tất cả nội dung của nó không? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa"
+  },
+  "tabs": {
+    "playground": "Sân chơi",
+    "notes": "Ghi chú",
+    "chat": "Trò chuyện",
+    "tools": "Công cụ",
+    "codeEditor": "Trình sửa mã",
+    "livePreview": "Xem trước",
+    "runResult": "Kết quả chạy",
+    "analysis": "Phân tích",
+    "explanation": "Giải thích",
+    "console": "Bảng điều khiển"
+  },
+  "priority": {
+    "high": "Cao",
+    "medium": "Trung bình",
+    "low": "Thấp",
+    "none": "Không",
+    "set": "Đặt ưu tiên"
+  },
+  "codeEditor": {
+    "runProject": "Chạy dự án",
+    "runningProject": "Đang chạy...",
+    "output": "Đầu ra",
+    "selectFile": "Chọn một tệp để bắt đầu chỉnh sửa.",
+    "emptyProject": "Dự án của bạn trống. Tạo một tệp hoặc thư mục để bắt đầu.",
+    "newFile": "Tệp mới",
+    "newFolder": "Thư mục mới",
+    "rename": "Đổi tên",
+    "delete": "Xóa",
+    "clear": "Xóa",
+    "clearOutput": "Xóa đầu ra",
+    "outputPlaceholder": "Đầu ra sẽ xuất hiện ở đây...",
+    "analyzeCode": "Phân tích Mã",
+    "suggestCompletion": "Gợi ý Hoàn thành",
+    "analyzing": "Đang phân tích mã...",
+    "explainSelection": "Giải thích Vùng chọn",
+    "prettifyCode": "Định dạng mã",
+    "formattingCode": "Đang định dạng..."
+  },
+  "challengeModal": {
+    "title": "Thử thách lập trình AI",
+    "loading": "Đang tạo thử thách cho bạn...",
+    "close": "Đóng",
+    "solve": "Giải trong Sân chơi"
+  }
+}
