@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon } from './icons';
@@ -174,7 +175,7 @@ const SimpleMarkdown: React.FC<{ text: string; searchQuery: string }> = ({ text,
           listItems.push(<li key={`${blockIndex}-${i}`}>{parseInline(lines[i].replace(/^\d+\.\s/, ''))}</li>);
           i++;
         }
-        elements.push(<ol key={`${blockIndex}-${i}-ol`} className="list-decimal pl-5 my-2 space-y-1">{listItems}</ul>);
+        elements.push(<ol key={`${blockIndex}-${i}-ol`} className="list-decimal pl-5 my-2 space-y-1">{listItems}</ol>);
         continue;
       }
 
