@@ -30,7 +30,10 @@
     "standardPaths": "Lộ trình Tiêu chuẩn",
     "yourPaths": "Lộ trình của Bạn",
     "deletePath": "Xóa Lộ trình",
-    "managePaths": "Quản lý Lộ trình"
+    "managePaths": "Quản lý Lộ trình",
+    "selectPath": "Chọn lộ trình",
+    "customLabel": "Tùy chỉnh",
+    "modulesCount": "{{count}} module"
   },
   "chat": {
     "title": "Trò chuyện với Mentor AI",
