@@ -1,4 +1,3 @@
-
 {
   "loading": "Đang tải AI Code Mentor...",
   "apiKeyNotFound": "Không tìm thấy khóa API",
@@ -43,7 +42,8 @@
     "errorTitle": "Lỗi",
     "clearHistory": "Xóa lịch sử trò chuyện",
     "undo": "Hoàn tác",
-    "redo": "Làm lại"
+    "redo": "Làm lại",
+    "challengeMe": "Thử thách tôi"
   },
   "playground": {
     "title": "Sân chơi mã",
@@ -95,7 +95,11 @@
     "projectGoalPlaceholder": "VD: Một trang web đơn giản để giới thiệu công việc thiết kế của tôi, được xây dựng bằng React và Tailwind CSS.",
     "cancel": "Hủy",
     "createProject": "Tạo dự án",
-    "saveChanges": "Lưu thay đổi"
+    "saveChanges": "Lưu thay đổi",
+    "scaffoldTitle": "Dựng sườn dự án",
+    "initialBotMessage": "Xin chào! Tôi có thể giúp bạn thiết lập một dự án mới. Đầu tiên, cho tôi biết tên và mục tiêu chính của dự án là gì?",
+    "generateProject": "Tạo tệp dự án",
+    "generating": "Đang tạo..."
   },
   "deleteProjectModal": {
     "title": "Xóa dự án",
@@ -118,7 +122,8 @@
     "notes": "Ghi chú",
     "chat": "Trò chuyện",
     "tools": "Công cụ",
-    "codeEditor": "Trình sửa mã"
+    "codeEditor": "Trình sửa mã",
+    "livePreview": "Xem trước"
   },
   "priority": {
     "high": "Cao",
@@ -142,6 +147,12 @@
     "outputPlaceholder": "Đầu ra sẽ xuất hiện ở đây...",
     "analyzeCode": "Phân tích Mã",
     "suggestCompletion": "Gợi ý Hoàn thành",
-    "analyzing": "Đang phân tích mã..."
+    "analyzing": "Đang phân tích mã...",
+    "explainSelection": "Giải thích Vùng chọn"
+  },
+  "challengeModal": {
+    "title": "Thử thách lập trình AI",
+    "loading": "Đang tạo thử thách cho bạn...",
+    "close": "Đóng"
   }
 }

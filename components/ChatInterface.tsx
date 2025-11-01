@@ -1,10 +1,6 @@
-
-
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types';
-import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon } from './icons';
+import { SendIcon, UserIcon, BotIcon, LinkIcon, CopyIcon, CheckIcon, SearchIcon, ChevronDownIcon, ChevronUpIcon, XIcon, TrashIcon, UndoIcon, RedoIcon, LightbulbIcon } from './icons';
 import { SimpleMarkdown } from './MarkdownRenderer';
 import { useTranslation } from 'react-i18next';
 
@@ -22,9 +18,12 @@ interface ChatInterfaceProps {
   canRedo: boolean;
   error: string | null;
   onClearError: () => void;
+  onRequestChallenge: () => void;
+  isChallengeLoading: boolean;
+  challengeDisabled: boolean;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory, onUndo, onRedo, canUndo, canRedo, error, onClearError }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, isLoading, onClearHistory, onUndo, onRedo, canUndo, canRedo, error, onClearError, onRequestChallenge, isChallengeLoading, challengeDisabled }) => {
   const { t } = useTranslation();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -136,6 +135,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
       <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-semibold">{t('chat.title')}</h2>
         <div className="flex items-center gap-2">
+           <button
+              onClick={onRequestChallenge}
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={t('chat.challengeMe')}
+              disabled={challengeDisabled || isLoading || isChallengeLoading}
+              title={t('chat.challengeMe')}
+            >
+              <LightbulbIcon className={`w-5 h-5 ${isChallengeLoading ? 'animate-pulse' : ''}`} />
+            </button>
            <button
             onClick={onUndo}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"

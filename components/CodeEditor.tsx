@@ -1,9 +1,6 @@
-
-
-
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FileSystemNode, ProjectFile, ProjectFolder } from '../types';
-import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile, SearchIcon, MagicWandIcon } from './icons';
+import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile, SearchIcon, MagicWandIcon, SparklesIcon } from './icons';
 import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from './MarkdownRenderer';
 
@@ -24,6 +21,7 @@ interface CodeEditorProps {
     isSuggesting: boolean;
     onAnalyzeCode: (code: string, language: string) => void;
     onSuggestCompletion: (code: string, fileId: string) => void;
+    onExplainCode: (selectedCode: string, fileContext: string, language: string) => void;
     output: any;
     onSetOutput: (output: any) => void;
     // File operations
@@ -409,12 +407,13 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         files, openFileIds, activeFileId, onOpenFile, onCloseFile, onSetActiveFile, 
         onUpdateFileContent, onRunProject, isRunning, output, onSetOutput,
         onCreateFile, onCreateFolder, onRenameNode, onDeleteNode, onMoveNode,
-        isAnalyzing, isSuggesting, onAnalyzeCode, onSuggestCompletion
+        isAnalyzing, isSuggesting, onAnalyzeCode, onSuggestCompletion, onExplainCode
     } = props;
     const { t } = useTranslation();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileSystemNode } | null>(null);
     const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
     const [isRootDragOver, setIsRootDragOver] = useState(false);
+    const [selection, setSelection] = useState('');
 
     const [sidebarWidth, setSidebarWidth] = useState(224); // Corresponds to w-56
     const isSidebarResizing = useRef(false);
@@ -541,6 +540,14 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
         }
     };
 
+    const handleSelectionChange = () => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            const selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+            setSelection(selectedText);
+        }
+    };
+
     const TabIcon = ({ name }: { name: string }) => {
         const Icon = getIconForFile(name, false);
         return <Icon className="w-4 h-4" />;
@@ -620,6 +627,14 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                 </div>
                 <div className="ml-4 flex items-center gap-2 flex-shrink-0">
                     <button
+                        onClick={() => onExplainCode(selection, code, language)}
+                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting || !selection}
+                        className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title={t('codeEditor.explainSelection')}
+                        >
+                        <SparklesIcon className="w-5 h-5"/>
+                    </button>
+                    <button
                         onClick={() => onAnalyzeCode(code, language)}
                         disabled={!activeFile || isRunning || isAnalyzing || isSuggesting}
                         className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -662,6 +677,9 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                             value={code}
                             onChange={(e) => onUpdateFileContent(activeFileId!, e.target.value)}
                             onScroll={handleScroll}
+                            onSelect={handleSelectionChange}
+                            onMouseUp={handleSelectionChange} // For mouse-based selection
+                            onKeyUp={handleSelectionChange} // For keyboard-based selection
                             placeholder="Enter your code here"
                             className="absolute inset-0 p-4 font-mono text-sm bg-transparent text-transparent caret-black dark:caret-white border-0 focus:ring-0 resize-none z-10"
                             spellCheck="false"

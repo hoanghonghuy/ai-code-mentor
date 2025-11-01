@@ -1,4 +1,3 @@
-
 {
   "loading": "Loading AI Code Mentor...",
   "apiKeyNotFound": "API Key Not Found",
@@ -43,7 +42,8 @@
     "errorTitle": "Error",
     "clearHistory": "Clear chat history",
     "undo": "Undo",
-    "redo": "Redo"
+    "redo": "Redo",
+    "challengeMe": "Challenge Me"
   },
   "playground": {
     "title": "Code Playground",
@@ -95,7 +95,11 @@
     "projectGoalPlaceholder": "e.g., A simple website to showcase my design work, built with React and Tailwind CSS.",
     "cancel": "Cancel",
     "createProject": "Create Project",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "scaffoldTitle": "Project Scaffolding",
+    "initialBotMessage": "Hello! I can help you set up a new project. First, what is the name of your project and what is its main goal?",
+    "generateProject": "Generate Project Files",
+    "generating": "Generating..."
   },
   "deleteProjectModal": {
     "title": "Delete Project",
@@ -118,7 +122,8 @@
     "notes": "Notes",
     "chat": "Chat",
     "tools": "Tools",
-    "codeEditor": "Code Editor"
+    "codeEditor": "Code Editor",
+    "livePreview": "Live Preview"
   },
   "priority": {
     "high": "High",
@@ -142,6 +147,12 @@
     "outputPlaceholder": "Output will appear here...",
     "analyzeCode": "Analyze Code",
     "suggestCompletion": "Suggest Completion",
-    "analyzing": "Analyzing code..."
+    "analyzing": "Analyzing code...",
+    "explainSelection": "Explain Selection"
+  },
+  "challengeModal": {
+    "title": "AI Coding Challenge",
+    "loading": "Generating a challenge for you...",
+    "close": "Close"
   }
 }

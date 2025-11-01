@@ -1,8 +1,5 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { GoogleGenAI, Chat } from "@google/genai";
+import { GoogleGenAI, Chat, GenerateContentResponse, Type } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile } from './types';
 import Header from './components/Header';
 import LearningPathView from './components/LearningPathView';
@@ -10,13 +7,15 @@ import ChatInterface from './components/ChatInterface';
 import CodePlayground from './components/CodePlayground';
 import CodeEditor from './components/CodeEditor';
 import Notification from './components/Notification';
-import { NoteIcon, PlayIcon, CodeIcon, ChatBubbleIcon, FilesIcon } from './components/icons';
+import { NoteIcon, PlayIcon, CodeIcon, ChatBubbleIcon, FilesIcon, EyeIcon } from './components/icons';
 import { learningPaths } from './learningPaths';
 import NotesPanel from './components/NotesPanel';
 import NewProjectModal from './components/NewProjectModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import { auth, db, googleProvider, signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, setDoc, serverTimestamp } from './firebase';
 import { useTranslation, Trans } from 'react-i18next';
+import LivePreview from './components/LivePreview';
+import ChallengeModal from './components/ChallengeModal';
 
 const GUEST_DATA_KEY = 'aiCodeMentorGuestData';
 
@@ -151,6 +150,9 @@ const App: React.FC = () => {
   const [projectToDelete, setProjectToDelete] = useState<CustomProject | null>(null);
   const [historyToClear, setHistoryToClear] = useState<{ view: 'learningPath' | 'customProject', id: string } | null>(null);
   const [nodeToDelete, setNodeToDelete] = useState<FileSystemNode | null>(null);
+  const [challengeContent, setChallengeContent] = useState<string | null>(null);
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [isChallengeLoading, setIsChallengeLoading] = useState(false);
 
   // Undo/Redo state - session only, not persisted
   const [chatHistory, setChatHistory] = useState<{ [key: string]: { past: ChatMessage[][], future: ChatMessage[][] } }>({});
@@ -164,7 +166,7 @@ const App: React.FC = () => {
   const [notes, setNotes] = useState<{ [key: string]: string }>(initialState.notes);
   const [bookmarkedLessonIds, setBookmarkedLessonIds] = useState<string[]>(initialState.bookmarkedLessonIds);
   const [customDocs, setCustomDocs] = useState<string[]>(initialState.customDocs);
-  const [activeRightTab, setActiveRightTab] = useState<'codeEditor' | 'playground' | 'notes'>('codeEditor');
+  const [activeRightTab, setActiveRightTab] = useState<'codeEditor' | 'playground' | 'notes' | 'livePreview'>('codeEditor');
   
   // Code Editor State
   const [projectFiles, setProjectFiles] = useState<FileSystemNode[]>(initialState.projectFiles);
@@ -824,6 +826,42 @@ ${projectStructure}`;
     }
   }, [ai, t]);
 
+  const handleExplainCode = useCallback(async (selectedCode: string, fileContext: string, language: string) => {
+    if (!ai) {
+        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
+        return;
+    };
+
+    setIsAnalyzing(true); // Reuse the same loading state
+    setProjectOutput(t('codeEditor.analyzing'));
+
+    const prompt = `You are an expert code explainer. A user has selected a snippet of code and wants to understand it.
+    
+    Explain the following code snippet clearly and concisely for a beginner.
+    
+    **Code Snippet:**
+    \`\`\`${language}
+    ${selectedCode}
+    \`\`\`
+    
+    For context, here is the full content of the file it came from:
+    \`\`\`${language}
+    ${fileContext}
+    \`\`\`
+    
+    Provide your explanation in Markdown format.`;
+
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        setProjectOutput({ type: 'analysis', content: response.text });
+    } catch (error) {
+        console.error('Error explaining code:', error);
+        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while explaining the code.' });
+    } finally {
+        setIsAnalyzing(false);
+    }
+  }, [ai, t]);
+
   const handleSuggestCompletion = useCallback(async (code: string, fileId: string) => {
     if (!ai || !fileId) return;
 
@@ -1049,36 +1087,35 @@ ${projectStructure}`;
     }
   }, [user, resetStateForGuest]);
 
-  const handleSaveCustomProject = useCallback(({ name, goal, id }: { name: string, goal: string, id?: string }) => {
-    if (id) { // Update
-        setCustomProjects(prev => prev.map(p => p.id === id ? { ...p, name, goal } : p));
-    } else { // Create
-        const newProject: CustomProject = {
-          id: `proj-${Date.now()}`,
-          name,
-          goal,
-          chatHistory: [],
-        };
-        setCustomProjects(prev => [...prev, newProject]);
-        setActiveCustomProjectId(newProject.id);
-        setActiveView('customProject');
-        setActiveMainView('chat');
-        
-        const kickstartPrompt = `Start a new custom project with me.
-        My project is called: "${name}"
-        My main goal is: "${goal}"
-        
-        First, welcome me to my new project. Then, ask me about my current programming knowledge to understand my skill level. Finally, suggest a technology stack and the very first step to get started.`;
-        
-        handleSendMessage(kickstartPrompt, { 
-          isSystemMessage: true, 
-          initialHistory: [],
-          targetId: newProject.id,
-          targetView: 'customProject'
-        });
-    }
+  const handleCreateProjectFromScaffold = useCallback((name: string, goal: string, files: FileSystemNode[]) => {
+    const newProject: CustomProject = {
+      id: `proj-${Date.now()}`,
+      name,
+      goal,
+      chatHistory: [],
+    };
+    setCustomProjects(prev => [...prev, newProject]);
+    setProjectFiles(files); // Set the generated files
+    // Reset open/active files to a sensible default
+    const firstFile = files.find(f => f.type === 'file') as ProjectFile | undefined;
+    setOpenFileIds(firstFile ? [firstFile.id] : []);
+    setActiveFileId(firstFile ? firstFile.id : null);
+    
+    setActiveCustomProjectId(newProject.id);
+    setActiveView('customProject');
+    setActiveMainView('tools'); // Switch to tools to show the new files
+    
+    // Send a follow-up message in the main chat
+    const kickstartPrompt = `I've just created a new project called "${name}" with the goal: "${goal}". You have generated the initial file structure for me. Now, please give me a brief overview of the files you created and suggest the first thing I should work on.`;
+    
+    handleSendMessage(kickstartPrompt, {
+      isSystemMessage: true,
+      initialHistory: [],
+      targetId: newProject.id,
+      targetView: 'customProject'
+    });
+
     setIsCreateModalOpen(false);
-    setProjectToEdit(null);
   }, [handleSendMessage]);
 
   const handleDeleteCustomProject = useCallback(() => {
@@ -1217,6 +1254,23 @@ ${projectStructure}`;
     return learningPath.modules.flatMap(m => m.lessons || m.project?.steps || []).find(l => l.id === activeLessonId) || null;
   }, [activeLessonId, learningPath]);
 
+  const handleRequestChallenge = useCallback(async () => {
+    if (!ai || !activeLesson) return;
+
+    setIsChallengeLoading(true);
+    const prompt = `Based on the learning topic "${activeLesson.title}: ${activeLesson.prompt}", create a small, relevant coding challenge for a beginner. The challenge should test the core concepts of the lesson. Format the response in Markdown. Include a clear problem description, an example if necessary, and a hint.`;
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        setChallengeContent(response.text);
+        setIsChallengeModalOpen(true);
+    } catch (error) {
+        console.error("Failed to generate challenge:", error);
+        // You could set an error message in the challenge modal here
+    } finally {
+        setIsChallengeLoading(false);
+    }
+  }, [ai, activeLesson]);
+
 
   if (authLoading) {
     return (
@@ -1327,6 +1381,9 @@ ${projectStructure}`;
                 canRedo={canRedo}
                 error={chatError}
                 onClearError={() => setChatError(null)}
+                onRequestChallenge={handleRequestChallenge}
+                isChallengeLoading={isChallengeLoading}
+                challengeDisabled={!activeLessonId}
               />
             </div>
             <div className={`flex-1 flex flex-col min-h-0 ${activeMainView === 'tools' ? 'flex' : 'hidden'}`}>
@@ -1337,6 +1394,12 @@ ${projectStructure}`;
                     className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'codeEditor' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
                     <FilesIcon className="w-5 h-5"/> {t('tabs.codeEditor')}
+                  </button>
+                  <button 
+                    onClick={() => setActiveRightTab('livePreview')}
+                    className={`flex items-center gap-2 py-2 px-4 text-sm font-semibold border-b-2 ${activeRightTab === 'livePreview' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    <EyeIcon className="w-5 h-5"/> {t('tabs.livePreview')}
                   </button>
                   <button 
                     onClick={() => setActiveRightTab('playground')}
@@ -1368,6 +1431,7 @@ ${projectStructure}`;
                     isSuggesting={isSuggesting}
                     onAnalyzeCode={handleAnalyzeCode}
                     onSuggestCompletion={handleSuggestCompletion}
+                    onExplainCode={handleExplainCode}
                     output={projectOutput}
                     onSetOutput={setProjectOutput}
                     onCreateFile={handleCreateFile}
@@ -1377,6 +1441,7 @@ ${projectStructure}`;
                     onMoveNode={handleMoveNode}
                   />
                 )}
+                {activeRightTab === 'livePreview' && <LivePreview files={projectFiles} />}
                 {activeRightTab === 'playground' && <CodePlayground onFirstRun={handleFirstCodeRun} />}
                 {activeRightTab === 'notes' && (
                   <NotesPanel 
@@ -1392,14 +1457,14 @@ ${projectStructure}`;
         </main>
       </div>
       <Notification achievement={notification} />
-      {(isCreateModalOpen || projectToEdit) && (
+      {isCreateModalOpen && (
           <NewProjectModal 
             onClose={() => {
                 setIsCreateModalOpen(false);
-                setProjectToEdit(null);
             }}
-            onSave={handleSaveCustomProject}
-            initialData={projectToEdit}
+            onScaffoldComplete={handleCreateProjectFromScaffold}
+            ai={ai}
+            aiLanguage={aiLanguage || 'en'}
           />
       )}
       {projectToDelete && (
@@ -1429,6 +1494,13 @@ ${projectStructure}`;
             confirmText={t('deleteNodeModal.confirm')}
         />
       )}
+       {isChallengeModalOpen && (
+        <ChallengeModal
+            isOpen={isChallengeModalOpen}
+            onClose={() => setIsChallengeModalOpen(false)}
+            challengeText={challengeContent}
+        />
+       )}
     </div>
   );
 };

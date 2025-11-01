@@ -277,6 +277,30 @@ export const MagicWandIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     </svg>
 );
 
+export const EyeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+);
+
+export const LightbulbIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M9 18h6" />
+        <path d="M10 22h4" />
+        <path d="M12 14v-1" />
+        <path d="M12 6a5.5 5.5 0 0 0-3.5 10.5c0 1.25.97 2.5 2.5 2.5h2c1.53 0 2.5-1.25 2.5-2.5A5.5 5.5 0 0 0 12 6Z" />
+    </svg>
+);
+
+export const SparklesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="m12 3-1.5 3L7 7.5l3 1.5L12 12l1.5-3L17 7.5l-3-1.5z" />
+        <path d="M5 12.5 2 14l3 1.5L6.5 19l1.5-3L11 14.5l-3-1.5z" />
+        <path d="m19 12.5 3 1.5-3 1.5-1.5 3-1.5-3-3-1.5 3-1.5z" />
+    </svg>
+);
+
 const iconMap: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
     TrophyIcon,
 };
