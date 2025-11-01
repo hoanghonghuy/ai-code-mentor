@@ -139,6 +139,9 @@
     "delete": "Xóa",
     "clear": "Xóa",
     "clearOutput": "Xóa đầu ra",
-    "outputPlaceholder": "Đầu ra sẽ xuất hiện ở đây..."
+    "outputPlaceholder": "Đầu ra sẽ xuất hiện ở đây...",
+    "analyzeCode": "Phân tích Mã",
+    "suggestCompletion": "Gợi ý Hoàn thành",
+    "analyzing": "Đang phân tích mã..."
   }
 }

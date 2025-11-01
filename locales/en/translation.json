@@ -139,6 +139,9 @@
     "delete": "Delete",
     "clear": "Clear",
     "clearOutput": "Clear output",
-    "outputPlaceholder": "Output will appear here..."
+    "outputPlaceholder": "Output will appear here...",
+    "analyzeCode": "Analyze Code",
+    "suggestCompletion": "Suggest Completion",
+    "analyzing": "Analyzing code..."
   }
 }

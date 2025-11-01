@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { LearningPath, Lesson, ChatMessage, Achievement, GroundingChunk, LearningPathId, ProjectStep, CustomProject, User, UserData, Priority, FileSystemNode, ProjectFolder, ProjectFile } from './types';
@@ -171,6 +172,8 @@ const App: React.FC = () => {
   const [activeFileId, setActiveFileId] = useState<string | null>(initialState.activeFileId);
   const [projectOutput, setProjectOutput] = useState<any>('');
   const [isProjectRunning, setIsProjectRunning] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
   // Settings State
   const [aiLanguage, setAiLanguage] = useState(initialState.aiLanguage);
@@ -798,6 +801,47 @@ ${projectStructure}`;
       setIsProjectRunning(false);
     }
   }, [ai, projectFiles, t]);
+
+  const handleAnalyzeCode = useCallback(async (code: string, language: string) => {
+    if (!ai) {
+        setProjectOutput({ type: 'error', error: "Gemini AI not initialized. Check API Key."});
+        return;
+    };
+
+    setIsAnalyzing(true);
+    setProjectOutput(t('codeEditor.analyzing'));
+
+    const prompt = `You are a code analysis tool. Analyze the following ${language} code for syntax errors, logical bugs, and style improvements. Provide a clear, concise report formatted in Markdown. If no issues are found, respond with "No issues found."\n\n\`\`\`${language}\n${code}\n\`\`\``;
+
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        setProjectOutput({ type: 'analysis', content: response.text });
+    } catch (error) {
+        console.error('Error analyzing code:', error);
+        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while analyzing the code.' });
+    } finally {
+        setIsAnalyzing(false);
+    }
+  }, [ai, t]);
+
+  const handleSuggestCompletion = useCallback(async (code: string, fileId: string) => {
+    if (!ai || !fileId) return;
+
+    setIsSuggesting(true);
+    
+    const prompt = `You are an expert programmer acting as a code completion assistant. Your task is to complete the following code snippet. Only provide the completed code. Do not add any explanation, comments, or markdown formatting like \`\`\`. Your response should be only the raw code that completes the snippet.\n\nCode:\n${code}`;
+    
+    try {
+        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        handleUpdateFileContent(fileId, response.text);
+    } catch (error) {
+        console.error('Error suggesting completion:', error);
+        setProjectOutput({ type: 'error', error: 'An unexpected error occurred while suggesting code.' });
+    } finally {
+        setIsSuggesting(false);
+    }
+  }, [ai, handleUpdateFileContent]);
+  
   // END: Code Editor Handlers
 
   const handleSendMessage = useCallback(async (
@@ -1320,6 +1364,10 @@ ${projectStructure}`;
                     onUpdateFileContent={handleUpdateFileContent}
                     onRunProject={handleRunProject}
                     isRunning={isProjectRunning}
+                    isAnalyzing={isAnalyzing}
+                    isSuggesting={isSuggesting}
+                    onAnalyzeCode={handleAnalyzeCode}
+                    onSuggestCompletion={handleSuggestCompletion}
                     output={projectOutput}
                     onSetOutput={setProjectOutput}
                     onCreateFile={handleCreateFile}

@@ -260,6 +260,23 @@ export const RedoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+export const MagicWandIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M15 4V2" />
+        <path d="M15 10v-2" />
+        <path d="M12.5 7.5h-1" />
+        <path d="M17.5 7.5h1" />
+        <path d="M3 21l3-3" />
+        <path d="M18 6l3-3" />
+        <path d="M21 3l-3 3" />
+        <path d="M16 8.5 5.5 19" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="M18.5 15.5h-1" />
+        <path d="M6.5 15.5h1" />
+    </svg>
+);
+
 const iconMap: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
     TrophyIcon,
 };

@@ -1,9 +1,11 @@
 
 
+
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FileSystemNode, ProjectFile, ProjectFolder } from '../types';
-import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile } from './icons';
+import { PlayIcon, FolderIcon, ChevronDownIcon, MoreVerticalIcon, PlusIcon, TrashIcon, PencilIcon, XIcon, getIconForFile, SearchIcon, MagicWandIcon } from './icons';
 import { useTranslation } from 'react-i18next';
+import { SimpleMarkdown } from './MarkdownRenderer';
 
 // Add hljs to the window object for TypeScript
 declare const hljs: any;
@@ -18,6 +20,10 @@ interface CodeEditorProps {
     onUpdateFileContent: (fileId: string, newContent: string) => void;
     onRunProject: () => void;
     isRunning: boolean;
+    isAnalyzing: boolean;
+    isSuggesting: boolean;
+    onAnalyzeCode: (code: string, language: string) => void;
+    onSuggestCompletion: (code: string, fileId: string) => void;
     output: any;
     onSetOutput: (output: any) => void;
     // File operations
@@ -324,6 +330,14 @@ const OutputDisplay: React.FC<{ output: any; isRunning: boolean; }> = ({ output,
         return <div className="p-4 text-gray-500">{t('codeEditor.outputPlaceholder')}</div>;
     }
 
+    if (parsedOutput.type === 'analysis') {
+        return (
+            <div className="p-4 font-sans text-sm">
+                <SimpleMarkdown text={parsedOutput.content} searchQuery="" />
+            </div>
+        );
+    }
+
     if (parsedOutput.type === 'web') {
         return (
             <div className="p-4 font-sans">
@@ -394,7 +408,8 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
     const { 
         files, openFileIds, activeFileId, onOpenFile, onCloseFile, onSetActiveFile, 
         onUpdateFileContent, onRunProject, isRunning, output, onSetOutput,
-        onCreateFile, onCreateFolder, onRenameNode, onDeleteNode, onMoveNode
+        onCreateFile, onCreateFolder, onRenameNode, onDeleteNode, onMoveNode,
+        isAnalyzing, isSuggesting, onAnalyzeCode, onSuggestCompletion
     } = props;
     const { t } = useTranslation();
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileSystemNode } | null>(null);
@@ -603,14 +618,32 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                         </div>
                     ))}
                 </div>
-                <button
-                onClick={onRunProject}
-                disabled={isRunning}
-                className="ml-4 p-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
-                >
-                <PlayIcon className="w-5 h-5"/>
-                <span>{isRunning ? t('codeEditor.runningProject') : t('codeEditor.runProject')}</span>
-                </button>
+                <div className="ml-4 flex items-center gap-2 flex-shrink-0">
+                    <button
+                        onClick={() => onAnalyzeCode(code, language)}
+                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting}
+                        className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title={t('codeEditor.analyzeCode')}
+                        >
+                        <SearchIcon className="w-5 h-5"/>
+                    </button>
+                     <button
+                        onClick={() => onSuggestCompletion(code, activeFileId!)}
+                        disabled={!activeFile || isRunning || isAnalyzing || isSuggesting}
+                        className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        title={t('codeEditor.suggestCompletion')}
+                        >
+                        <MagicWandIcon className="w-5 h-5"/>
+                    </button>
+                    <button
+                        onClick={onRunProject}
+                        disabled={isRunning || isAnalyzing || isSuggesting}
+                        className="p-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                        <PlayIcon className="w-5 h-5"/>
+                        <span>{isRunning ? t('codeEditor.runningProject') : t('codeEditor.runProject')}</span>
+                    </button>
+                </div>
             </div>
             
             {/* Editor Area */}
@@ -662,7 +695,7 @@ const CodeEditor: React.FC<CodeEditorProps> = (props) => {
                     </button>
                 </div>
                 <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto min-h-0">
-                   <OutputDisplay output={output} isRunning={isRunning} />
+                   <OutputDisplay output={output} isRunning={isRunning || isAnalyzing || isSuggesting} />
                 </div>
             </div>
         </div>
