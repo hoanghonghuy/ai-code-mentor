@@ -1,0 +1,38 @@
+{
+  "loading": "Loading...",
+  "apiKeyNotFound": "API key not found",
+  "apiKeyNotFoundMessage": "Please configure your API key in environment settings.",
+  "sidebar": {
+    "learning": "Learning",
+    "projects": "Projects",
+    "standardPaths": "Standard Paths",
+    "yourPaths": "Your Paths",
+    "newPath": "New Path",
+    "lessons": "Lessons",
+    "achievements": "Achievements",
+    "settings": "Settings",
+    "showBookmarkedOnly": "Show bookmarked only",
+    "sortBy": "Sort by",
+    "sort": { "default": "Default", "priority": "Priority" }
+  },
+  "createPathModal": {
+    "title": "Create Personalized Learning Path",
+    "initialBotMessage": "Tell me about your goal and current level. I will design a path for you.",
+    "preview": "Preview of the generated path",
+    "confirmMessage": "Do you want to start this learning path now?",
+    "startPath": "Start this path",
+    "starting": "Starting..."
+  },
+  "deleteProjectModal": {
+    "title": "Delete Project",
+    "message": "Are you sure you want to delete project {{projectName}}?",
+    "confirm": "Delete"
+  },
+  "deletePathModal": {
+    "title": "Delete Learning Path",
+    "message": "Are you sure you want to delete path: {{pathName}}?",
+    "confirm": "Delete"
+  },
+  "tabs": { "chat": "Chat", "tools": "Tools", "codeEditor": "Code Editor", "livePreview": "Live Preview", "playground": "Playground", "notes": "Notes" },
+  "chat": { "sendError": "Unable to send message. Please try again.", "placeholder": "Type your message..." }
+}
