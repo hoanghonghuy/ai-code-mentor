@@ -1,5 +1,6 @@
 import type { LearningPath, LearningPathId, Achievement, UserData } from '../types';
 import { learningPaths } from '../learningPaths';
+import { safeArray, safeString } from '../utils/guards';
 
 /**
  * Service for managing learning paths (both standard and custom)
@@ -41,7 +42,7 @@ export const getStandardPaths = (): LearningPath[] => {
  */
 export const findPathById = (pathId: string, customPaths: LearningPath[]): LearningPath | null => {
   // Try custom paths first
-  const customPath = customPaths.find(p => p.id === pathId);
+  const customPath = safeArray(customPaths).find(p => p.id === pathId);
   if (customPath) return customPath;
   
   // Then try standard paths
@@ -81,7 +82,7 @@ export const getPathSwitchState = (targetPath: LearningPath, resetProgress: bool
   if (resetProgress) {
     return {
       ...baseState,
-      achievements: getInitialAchievements(targetPath.title),
+      achievements: getInitialAchievements(safeString(targetPath.title, 'Learning Path')),
       points: 0,
       learningPathHistories: {},
       notes: {},
@@ -94,35 +95,88 @@ export const getPathSwitchState = (targetPath: LearningPath, resetProgress: bool
 };
 
 /**
- * Validate learning path data structure
+ * FIXED: More flexible validation for learning path data structure
+ * Supports both standard and custom learning paths with various structures
  */
 export const validateLearningPath = (path: any): path is LearningPath => {
-  if (!path || typeof path !== 'object') return false;
-  if (!path.id || !path.title) return false;
-  if (!Array.isArray(path.modules)) return false;
-  
-  return path.modules.every((module: any) => {
-    if (!module.title) return false;
-    // Either lessons or project must exist
-    if (!Array.isArray(module.lessons) && !module.project) return false;
-    if (module.project && !Array.isArray(module.project.steps)) return false;
+  try {
+    // Basic structure checks
+    if (!path || typeof path !== 'object') {
+      console.warn('Path validation failed: not an object');
+      return false;
+    }
+    
+    if (!safeString(path.id) || !safeString(path.title)) {
+      console.warn('Path validation failed: missing id or title');
+      return false;
+    }
+    
+    // Modules must exist and be an array
+    if (!Array.isArray(path.modules)) {
+      console.warn('Path validation failed: modules is not an array');
+      return false;
+    }
+    
+    // More flexible module validation
+    const isValidModule = (module: any): boolean => {
+      if (!module || typeof module !== 'object') return false;
+      if (!safeString(module.title)) return false;
+      
+      // Module can have lessons, project, or both
+      const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
+      const hasProject = module.project && typeof module.project === 'object';
+      
+      if (!hasLessons && !hasProject) {
+        console.warn(`Module '${module.title}' has neither lessons nor project`);
+        return false;
+      }
+      
+      // If has project, validate project structure
+      if (hasProject) {
+        if (!safeString(module.project.title)) {
+          console.warn(`Project in module '${module.title}' missing title`);
+          return false;
+        }
+        if (!Array.isArray(module.project.steps)) {
+          console.warn(`Project in module '${module.title}' missing or invalid steps`);
+          return false;
+        }
+      }
+      
+      return true;
+    };
+    
+    // Validate all modules (but allow empty modules array for new custom paths)
+    if (path.modules.length > 0) {
+      const invalidModules = path.modules.filter((m: any) => !isValidModule(m));
+      if (invalidModules.length > 0) {
+        console.warn(`Path '${path.title}' has ${invalidModules.length} invalid modules`);
+        return false;
+      }
+    }
+    
+    console.log(`Path '${path.title}' passed validation`);
     return true;
-  });
+    
+  } catch (error) {
+    console.error('Error during path validation:', error);
+    return false;
+  }
 };
 
 /**
  * Safe path access helpers
  */
 export const getPathModules = (path: LearningPath | null | undefined): any[] => {
-  return Array.isArray(path?.modules) ? path.modules : [];
+  return safeArray(path?.modules);
 };
 
 export const getModuleLessons = (module: any): any[] => {
-  return Array.isArray(module?.lessons) ? module.lessons : [];
+  return safeArray(module?.lessons);
 };
 
 export const getProjectSteps = (module: any): any[] => {
-  return Array.isArray(module?.project?.steps) ? module.project.steps : [];
+  return safeArray(module?.project?.steps);
 };
 
 export const getAllPathItems = (path: LearningPath | null | undefined): any[] => {
@@ -132,4 +186,87 @@ export const getAllPathItems = (path: LearningPath | null | undefined): any[] =>
     const steps = getProjectSteps(m);
     return lessons.length > 0 ? lessons : steps;
   });
+};
+
+/**
+ * ADDED: Repair/normalize learning path structure if possible
+ * Attempts to fix common issues in stored custom paths
+ */
+export const repairLearningPath = (path: any): LearningPath | null => {
+  if (!path || typeof path !== 'object') return null;
+  
+  try {
+    const repaired: LearningPath = {
+      id: safeString(path.id) || `custom-${Date.now()}`,
+      title: safeString(path.title, 'Untitled Path'),
+      description: safeString(path.description, 'Custom learning path'),
+      modules: safeArray(path.modules).map((module: any) => ({
+        title: safeString(module.title, 'Untitled Module'),
+        description: safeString(module.description),
+        lessons: safeArray(module.lessons).map((lesson: any) => ({
+          id: safeString(lesson.id) || `lesson-${Date.now()}-${Math.random()}`,
+          title: safeString(lesson.title, 'Untitled Lesson'),
+          prompt: safeString(lesson.prompt, 'Start learning!'),
+          completed: Boolean(lesson.completed),
+          priority: lesson.priority || 'none',
+        })),
+        project: module.project ? {
+          title: safeString(module.project.title, 'Untitled Project'),
+          description: safeString(module.project.description),
+          steps: safeArray(module.project.steps).map((step: any) => ({
+            id: safeString(step.id) || `step-${Date.now()}-${Math.random()}`,
+            title: safeString(step.title, 'Untitled Step'),
+            prompt: safeString(step.prompt, 'Continue with this step!'),
+            completed: Boolean(step.completed),
+            priority: step.priority || 'none',
+          })),
+        } : undefined,
+      })),
+    };
+    
+    // Ensure at least one valid module exists
+    if (repaired.modules.length === 0) {
+      repaired.modules.push({
+        title: 'Getting Started',
+        description: 'Begin your learning journey',
+        lessons: [{
+          id: `lesson-${Date.now()}`,
+          title: 'Introduction',
+          prompt: 'Welcome to your custom learning path! Let\'s begin.',
+          completed: false,
+          priority: 'none',
+        }],
+      });
+    }
+    
+    return repaired;
+  } catch (error) {
+    console.error('Failed to repair learning path:', error);
+    return null;
+  }
+};
+
+/**
+ * ENHANCED: Find path with automatic repair attempt
+ */
+export const findPathByIdWithRepair = (pathId: string, customPaths: LearningPath[]): LearningPath | null => {
+  const found = findPathById(pathId, customPaths);
+  if (!found) return null;
+  
+  // First try normal validation
+  if (validateLearningPath(found)) {
+    return found;
+  }
+  
+  // If validation fails, attempt repair
+  console.warn(`Path '${pathId}' failed validation, attempting repair...`);
+  const repaired = repairLearningPath(found);
+  
+  if (repaired && validateLearningPath(repaired)) {
+    console.log(`Successfully repaired path '${pathId}'`);
+    return repaired;
+  }
+  
+  console.error(`Cannot repair path '${pathId}', falling back to null`);
+  return null;
 };
